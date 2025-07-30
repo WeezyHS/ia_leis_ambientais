@@ -13,7 +13,7 @@ driver = webdriver.Edge(options=options)
 leis_coletadas = []
 
 try:
-    for pagina in range(1, 6):
+    for pagina in range(1, 21):
         url = f"https://www.al.to.leg.br/legislacaoEstadual?pagPaginaAtual={pagina}"
         driver.get(url)
 
