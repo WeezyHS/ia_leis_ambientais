@@ -1,4 +1,5 @@
 from bs4 import BeautifulSoup
+import re
 
 # Lista de palavras-chave ambientais
 PALAVRAS_CHAVE_EXATAS = [
@@ -17,17 +18,25 @@ PALAVRAS_CHAVE_EXATAS = [
 
 SIGLAS_MAIUSCULAS = ["EIA", "RIMA"]
 
+def normalizar_texto(texto: str) -> str:
+    texto = texto.replace("\n", " ")
+    texto = re.sub(r"\s+", " ", texto)  # Remove múltiplos espaços
+    return texto.strip().lower()
 
 def contem_palavra_chave(texto: str) -> bool:
-    texto_lower = texto.lower()
-    # Checa frases inteiras em minúsculas
-    for palavra in PALAVRAS_CHAVE_EXATAS:
-        if palavra in texto_lower:
+    texto_normalizado = normalizar_texto(texto)
+
+    # Usa regex para buscar frases completas como palavras isoladas
+    for frase in PALAVRAS_CHAVE_EXATAS:
+        # Adiciona limites de palavra antes e depois (para evitar palavras encaixadas)
+        if re.search(rf'\b{re.escape(frase)}\b', texto_normalizado):
             return True
-    # Checa siglas com case exato (maiusculas apenas)
+
+    # Siglas devem aparecer em CAIXA ALTA exatamente
     for sigla in SIGLAS_MAIUSCULAS:
-        if sigla in texto:
+        if re.search(rf'\b{sigla}\b', texto):
             return True
+
     return False
 
 
@@ -39,7 +48,7 @@ def extrair_leis_do_html(html: str) -> list[dict]:
     for bloco in blocos:
         colunas = bloco.find_all("div", class_="col-12")
         if len(colunas) < 3:
-            continue  # Não tem todos os elementos necessários
+            continue
 
         titulo_tag = colunas[0].find("h4")
         titulo = titulo_tag.get_text(strip=True) if titulo_tag else ""
