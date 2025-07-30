@@ -1,4 +1,4 @@
-# Sistema Inteligente de Consulta a Leis Ambientais do Tocantins 🌱⚖️
+# Sistema Inteligente de Consulta a Leis Ambientais do Tocantins
 
 Este projeto tem como objetivo oferecer um sistema inteligente de busca e consulta de leis ambientais do estado do Tocantins, utilizando técnicas modernas de scraping, vetorização semântica e inteligência artificial. O sistema permite que usuários realizem perguntas em linguagem natural e obtenham respostas precisas com base nas leis indexadas.
 
@@ -17,7 +17,7 @@ Este projeto tem como objetivo oferecer um sistema inteligente de busca e consul
 
 ---
 
-## 🛠️ Tecnologias Utilizadas
+##Tecnologias Utilizadas
 
 - **Python 3.11+**
 - **FastAPI**
