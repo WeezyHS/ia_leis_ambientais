@@ -2,8 +2,6 @@
 
 Este projeto tem como objetivo oferecer um sistema inteligente de busca e consulta de leis ambientais do estado do Tocantins, utilizando técnicas modernas de scraping, vetorização semântica e inteligência artificial. O sistema permite que usuários realizem perguntas em linguagem natural e obtenham respostas precisas com base nas leis indexadas.
 
----
-
 ## Funcionalidades
 
 - Coleta automatizada de leis do site da Assembleia Legislativa do Tocantins (via Selenium).
@@ -14,8 +12,6 @@ Este projeto tem como objetivo oferecer um sistema inteligente de busca e consul
 - Geração de embeddings usando o modelo **text-embedding-3-small** da OpenAI.
 - Integração com GPT-4o-mini para geração de respostas em linguagem natural.
 - Mecanismo para evitar duplicação de leis no banco vetorial.
-
----
 
 ## Tecnologias Utilizadas
 
