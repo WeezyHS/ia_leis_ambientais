@@ -4,7 +4,7 @@ Este projeto tem como objetivo oferecer um sistema inteligente de busca e consul
 
 ---
 
-## 📚 Funcionalidades
+## Funcionalidades
 
 - Coleta automatizada de leis do site da Assembleia Legislativa do Tocantins (via Selenium).
 - Extração estruturada de dados: título, descrição e conteúdo completo da lei.
@@ -17,7 +17,7 @@ Este projeto tem como objetivo oferecer um sistema inteligente de busca e consul
 
 ---
 
-##Tecnologias Utilizadas
+## Tecnologias Utilizadas
 
 - **Python 3.11+**
 - **FastAPI**
