@@ -24,4 +24,4 @@ Este projeto tem como objetivo oferecer um sistema inteligente de busca e consul
 - **Pinecone**
 - **dotenv**
 - **Uvicorn**
-- **Pytest (para testes automatizados)**
+- **Pytest (testes automatizados)**
