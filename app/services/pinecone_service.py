@@ -35,7 +35,9 @@ def indexar_no_pinecone(itens):
             metadata={
                 "id": item["id"],
                 "titulo": item["metadata"]["titulo"],
-                "descricao": item["metadata"]["descricao"]
+                "descricao": item["metadata"]["descricao"],
+                "numero_lei": item["metadata"].get("numero_lei"),
+                "numero_lei_puro": item["metadata"].get("numero_lei_puro")
             }
         )
         for item in itens
