@@ -5,6 +5,9 @@ from langchain.chains import RetrievalQA
 from langchain_core.prompts import PromptTemplate
 from app.services.pinecone_service import vectorstore
 from app.services.custom_prompt import QA_CUSTOM_PROMPT
+from app.services.text_normalizer import normalizar_texto, normalizar_pergunta_busca
+from app.services.enhanced_retriever import buscar_documentos_com_normalizacao
+from app.services.database_stats import detectar_pergunta_tecnica, gerar_resposta_tecnica
 
 def extrair_numero_lei(pergunta: str):
     # Captura formatos com ou sem ponto, com ou sem espaços
@@ -31,7 +34,7 @@ llm = ChatOpenAI(
 qa_chain = RetrievalQA.from_chain_type(
     llm=llm,
     chain_type="stuff",
-    retriever=vectorstore.as_retriever(),
+    retriever=vectorstore.as_retriever(search_kwargs={"k": 4}),
     return_source_documents=True,
     chain_type_kwargs={
         "prompt": QA_CUSTOM_PROMPT
@@ -39,12 +42,25 @@ qa_chain = RetrievalQA.from_chain_type(
 )
 
 def consultar_lei(pergunta: str) -> dict:
+    # 🔧 Verifica se é uma pergunta técnica sobre o sistema
+    if detectar_pergunta_tecnica(pergunta):
+        resposta_tecnica = gerar_resposta_tecnica(pergunta)
+        return {
+            "resposta": resposta_tecnica,
+            "leis_relacionadas": [],
+            "tipo_resposta": "tecnica"
+        }
+    
+    # Normaliza a pergunta para melhorar a busca
+    pergunta_normalizada = normalizar_pergunta_busca(pergunta)
     numero_lei = extrair_numero_lei(pergunta)
 
     # 🔍 Busca por número específico
     if numero_lei:
+        # Usa tanto a pergunta original quanto a normalizada para busca por número
+        query_busca = f"lei {numero_lei} {pergunta_normalizada}"
         documentos = vectorstore.similarity_search(
-            query=f"lei {numero_lei}",
+            query=query_busca,
             k=5,
             filter={
                 "$or": [
@@ -79,14 +95,33 @@ def consultar_lei(pergunta: str) -> dict:
             }
 
     # 🤖 Caso não tenha número ou não encontrou diretamente
-    # Adicionamos o número da lei na pergunta se foi detectado
-    pergunta_enriquecida = pergunta
+    # Usa busca aprimorada com normalização para capturar variações de acentuação
+    pergunta_enriquecida = pergunta_normalizada
     if numero_lei:
-        pergunta_enriquecida = f"Sobre a Lei {numero_lei}: {pergunta}"
+        pergunta_enriquecida = f"Sobre a Lei {numero_lei}: {pergunta_normalizada}"
     
-    resultado = qa_chain(pergunta_enriquecida)
-    resposta = resultado["result"]
-    documentos = resultado.get("source_documents", [])
+    # Busca documentos usando normalização de texto
+    documentos_normalizados = buscar_documentos_com_normalizacao(pergunta_enriquecida, k=4)
+    
+    # Se encontrou documentos com busca normalizada, usa eles
+    if documentos_normalizados:
+        # Cria contexto a partir dos documentos encontrados
+        contexto = "\n\n".join([doc.page_content for doc in documentos_normalizados])
+        
+        # Usa o prompt customizado para gerar resposta
+        prompt_formatado = QA_CUSTOM_PROMPT.format(
+            context=contexto,
+            question=pergunta
+        )
+        
+        resposta_llm = llm.invoke(prompt_formatado)
+        resposta = resposta_llm.content
+        documentos = documentos_normalizados
+    else:
+        # Fallback para busca padrão
+        resultado = qa_chain(pergunta_enriquecida)
+        resposta = resultado["result"]
+        documentos = resultado.get("source_documents", [])
 
     # Extraímos os números das leis citadas na resposta para destacar
     numeros_leis_citadas = set()
