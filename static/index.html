@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🤖 IA - Leis Ambientais do Tocantins</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            color: #2d3748;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
+            padding: 0 1rem;
+        }
+
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 2rem 0;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .message {
+            display: flex;
+            gap: 0.75rem;
+            max-width: 100%;
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message.assistant {
+            justify-content: flex-start;
+        }
+
+        .message-content {
+            background: white;
+            padding: 1rem 1.25rem;
+            border-radius: 1rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+
+        .message.user .message-content {
+            background: #667eea;
+            color: white;
+        }
+
+        .message.assistant .message-content {
+            background: white;
+            color: #2d3748;
+        }
+
+        .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+
+        .user .avatar {
+            background: #4299e1;
+            color: white;
+        }
+
+        .assistant .avatar {
+            background: #48bb78;
+            color: white;
+        }
+
+        .input-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1.5rem 2rem;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .input-form {
+            display: flex;
+            gap: 0.75rem;
+            align-items: flex-end;
+        }
+
+        .input-wrapper {
+            flex: 1;
+            position: relative;
+        }
+
+        #messageInput {
+            width: 100%;
+            min-height: 44px;
+            max-height: 120px;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 0.75rem;
+            font-size: 1rem;
+            font-family: inherit;
+            resize: none;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        #messageInput:focus {
+            border-color: #667eea;
+        }
+
+        #sendButton {
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 0.75rem;
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            min-width: 80px;
+        }
+
+        #sendButton:hover:not(:disabled) {
+            background: #5a67d8;
+        }
+
+        #sendButton:disabled {
+            background: #a0aec0;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #718096;
+            font-style: italic;
+        }
+
+        .loading-dots {
+            display: inline-flex;
+            gap: 2px;
+        }
+
+        .loading-dot {
+            width: 4px;
+            height: 4px;
+            background: #718096;
+            border-radius: 50%;
+            animation: loading 1.4s infinite ease-in-out;
+        }
+
+        .loading-dot:nth-child(1) { animation-delay: -0.32s; }
+        .loading-dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes loading {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+
+        .welcome-message {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.9);
+            padding: 2rem;
+            margin-top: 2rem;
+        }
+
+        .welcome-message h2 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .welcome-message p {
+            font-size: 1rem;
+            opacity: 0.8;
+        }
+
+        /* Scrollbar personalizada */
+        .messages-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .messages-container::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+
+        .messages-container::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+        }
+
+        .messages-container::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        /* Responsivo */
+        @media (max-width: 768px) {
+            .header {
+                padding: 1rem;
+            }
+
+            .input-container {
+                padding: 1rem;
+            }
+
+            .message-content {
+                max-width: 90%;
+            }
+
+            .header h1 {
+                font-size: 1.25rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🤖 IA - Consulta de Leis Ambientais do Tocantins</h1>
+    </div>
+
+    <div class="chat-container">
+        <div class="messages-container" id="messagesContainer">
+            <div class="welcome-message">
+                <h2>Bem-vindo ao Assistente de Leis Ambientais! 🌿</h2>
+                <p>Faça perguntas sobre as leis ambientais do Tocantins ou sobre o sistema.</p>
+            </div>
+        </div>
+
+        <div class="input-container">
+            <form class="input-form" id="messageForm">
+                <div class="input-wrapper">
+                    <textarea 
+                        id="messageInput" 
+                        placeholder="Digite sua pergunta sobre leis ambientais..."
+                        rows="1"
+                    ></textarea>
+                </div>
+                <button type="submit" id="sendButton">Enviar</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const messagesContainer = document.getElementById('messagesContainer');
+        const messageForm = document.getElementById('messageForm');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+
+        // Auto-resize textarea
+        messageInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        });
+
+        // Submit on Enter (but not Shift+Enter)
+        messageInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                messageForm.dispatchEvent(new Event('submit'));
+            }
+        });
+
+        // Handle form submission
+        messageForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const message = messageInput.value.trim();
+            if (!message) return;
+
+            // Add user message
+            addMessage(message, 'user');
+            
+            // Clear input and disable form
+            messageInput.value = '';
+            messageInput.style.height = 'auto';
+            setLoading(true);
+
+            try {
+                // Send request to API
+                const response = await fetch('/consulta', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ pergunta: message })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Erro ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                
+                // Add assistant response
+                addMessage(data.resposta || 'Não foi possível gerar uma resposta.', 'assistant');
+                
+            } catch (error) {
+                console.error('Erro:', error);
+                addMessage(`❌ Erro na requisição: ${error.message}`, 'assistant');
+            } finally {
+                setLoading(false);
+                messageInput.focus();
+            }
+        });
+
+        function addMessage(content, sender) {
+            // Remove welcome message if it exists
+            const welcomeMessage = document.querySelector('.welcome-message');
+            if (welcomeMessage) {
+                welcomeMessage.remove();
+            }
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+            
+            const avatar = document.createElement('div');
+            avatar.className = 'avatar';
+            avatar.textContent = sender === 'user' ? '👤' : '🤖';
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            
+            // Format content with basic markdown support
+            const formattedContent = formatMessage(content);
+            contentDiv.innerHTML = formattedContent;
+            
+            if (sender === 'user') {
+                messageDiv.appendChild(contentDiv);
+                messageDiv.appendChild(avatar);
+            } else {
+                messageDiv.appendChild(avatar);
+                messageDiv.appendChild(contentDiv);
+            }
+            
+            messagesContainer.appendChild(messageDiv);
+            
+            // Scroll to bottom
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function formatMessage(content) {
+            // Basic markdown formatting
+            return content
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/\n/g, '<br>')
+                .replace(/📊|🏛️|📄|📅|📋|🔧|💾|🤖|📐|🔍|⚙️|🔄|🔍|📈|🌿|❌/g, '<span style="font-size: 1.1em;">$&</span>');
+        }
+
+        function setLoading(loading) {
+            sendButton.disabled = loading;
+            messageInput.disabled = loading;
+            
+            if (loading) {
+                sendButton.innerHTML = '<div class="loading-dots"><div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div></div>';
+            } else {
+                sendButton.textContent = 'Enviar';
+            }
+        }
+
+        // Focus input on load
+        messageInput.focus();
+    </script>
+</body>
+</html>
