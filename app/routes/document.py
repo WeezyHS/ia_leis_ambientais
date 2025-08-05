@@ -1,1 +1,0 @@
-#Arquivo criado para lidar com conteúdo de documentos que serão adicionados aqui futuramente.
