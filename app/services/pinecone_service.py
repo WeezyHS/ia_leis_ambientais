@@ -36,8 +36,16 @@ def indexar_no_pinecone(itens):
                 "id": item["id"],
                 "titulo": item["metadata"]["titulo"],
                 "descricao": item["metadata"]["descricao"],
-                "numero_lei": item["metadata"].get("numero_lei"),
-                "numero_lei_puro": item["metadata"].get("numero_lei_puro")
+                **{k: v for k, v in {
+                    "numero_lei": item["metadata"].get("numero_lei"),
+                    "numero_lei_puro": item["metadata"].get("numero_lei_puro"),
+                    "source": item["metadata"].get("source"),
+                    "url": item["metadata"].get("url"),
+                    "type": item["metadata"].get("type"),
+                    "collected_at": item["metadata"].get("collected_at"),
+                    "chunk_index": item["metadata"].get("chunk_index"),
+                    "total_chunks": item["metadata"].get("total_chunks")
+                }.items() if v is not None}
             }
         )
         for item in itens
