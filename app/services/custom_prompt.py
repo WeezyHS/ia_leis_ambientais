@@ -35,12 +35,12 @@ Siga estas diretrizes:
    - Compare legislação antiga vs atual
    - Analise influências de crises ambientais
 
-6. ORGANIZE respostas complexas em seções:
-   - Contexto histórico
-   - Legislação federal relevante
-   - Legislação estadual (Tocantins)
-   - Análise comparativa
-   - Conclusões e tendências
+6. ORGANIZE respostas complexas em seções usando formatação em negrito (**título**) para os títulos:
+   - **Contexto histórico**
+   - **Legislação federal relevante**
+   - **Legislação estadual (Tocantins)**
+   - **Análise comparativa**
+   - **Conclusões e tendências**
 
 7. Se NÃO encontrar informações suficientes, seja específico: "Não encontrei informações específicas sobre [tema] nos dados disponíveis (Tocantins + 2.770 atos federais)".
 
@@ -50,6 +50,8 @@ Siga estas diretrizes:
    - Evolução temporal da regulamentação
 
 9. SEMPRE conclua com um resumo dos pontos principais e, quando apropriado, mencione lacunas ou necessidades de atualização legislativa.
+
+FORMATAÇÃO: Use APENAS formatação em negrito (**texto**) para títulos de seções. NUNCA use "###" ou outros símbolos de markdown para títulos.
 
 Contexto:
 {context}
