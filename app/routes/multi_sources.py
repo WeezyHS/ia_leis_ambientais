@@ -105,7 +105,7 @@ async def get_sources_status():
     
     try:
         collector = MultiSourceCollector()
-        available_sources = list(collector.scrapers.keys())
+        available_sources = [scraper.name for scraper in collector.scrapers]
         
         return {
             "status": "available",
@@ -162,13 +162,15 @@ async def collect_and_index_sources(sources: Optional[List[str]]):
             # Coleta apenas das fontes especificadas
             all_documents = []
             for source in sources:
-                if source in collector.scrapers:
-                    documents = collector.scrapers[source].extract_documents()
+                # Busca o scraper pelo nome
+                scraper = next((s for s in collector.scrapers if s.name == source), None)
+                if scraper:
+                    documents = scraper.extract_documents()
                     all_documents.extend(documents)
                     print(f"✅ Coletados {len(documents)} documentos de {source}")
         else:
             # Coleta de todas as fontes
-            all_documents = collector.collect_all()
+            all_documents = collector.collect_all_sources()
             print(f"✅ Coletados {len(all_documents)} documentos de todas as fontes")
         
         # Indexa os documentos coletados
