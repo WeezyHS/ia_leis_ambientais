@@ -102,7 +102,7 @@ def gerar_resposta_tecnica(pergunta: str) -> str:
 
 📅 **Período de Cobertura**: {stats.get('periodo_cobertura', {}).get('ano_inicio', 'N/A')} - {stats.get('periodo_cobertura', {}).get('ano_fim', 'N/A')}
 
-📋 **Tipos de Documentos**:
+**Tipos de Documentos**:
 • Leis: {stats.get('tipos_documento', {}).get('lei', 0)}
 • Decretos: {stats.get('tipos_documento', {}).get('decreto', 0)}
 • Resoluções: {stats.get('tipos_documento', {}).get('resolucao', 0)}
@@ -121,13 +121,13 @@ def gerar_resposta_tecnica(pergunta: str) -> str:
     elif any(palavra in pergunta_lower for palavra in ["como funciona", "funcionamento", "arquitetura"]):
         return f"""⚙️ **Como o Sistema Funciona**
 
-🔄 **Processo de Indexação**:
+**Processo de Indexação**:
 1. **Coleta**: Scraping automatizado do site da Assembleia Legislativa
 2. **Processamento**: Extração e limpeza do texto das leis
 3. **Vetorização**: Conversão em embeddings usando IA da OpenAI
 4. **Armazenamento**: Indexação no Pinecone para busca semântica
 
-🔍 **Processo de Consulta**:
+**Processo de Consulta**:
 1. **Normalização**: Sua pergunta é processada e normalizada
 2. **Busca Semântica**: Encontra leis similares usando vetores
 3. **IA Generativa**: GPT-4o-mini gera resposta contextualizada
@@ -140,7 +140,7 @@ def gerar_resposta_tecnica(pergunta: str) -> str:
 
 Sim, tenho acesso a um banco de dados especializado! 
 
-📊 **Resumo dos Dados**:
+**Resumo dos Dados**:
 • **{stats.get('total_leis_unicas', 'N/A')} leis únicas** indexadas
 • **{stats.get('total_documentos', 'N/A')} segmentos** de texto processados
 • **Período**: {stats.get('periodo_cobertura', {}).get('ano_inicio', 'N/A')} a {stats.get('periodo_cobertura', {}).get('ano_fim', 'N/A')}
@@ -159,12 +159,25 @@ def detectar_pergunta_tecnica(pergunta: str) -> bool:
     Returns:
         True se for pergunta técnica, False caso contrário
     """
-    palavras_tecnicas = [
-        "banco de dados", "database", "quantas leis", "quantidade", 
-        "número de leis", "tecnologia", "como funciona", "funcionamento",
-        "arquitetura", "sistema", "dados", "informações", "estatísticas",
-        "você tem", "possui", "disponível", "indexadas", "armazenadas"
+    # Primeiro verifica se é uma saudação simples
+    saudacoes = [
+        "olá", "oi", "bom dia", "boa tarde", "boa noite", "hello", "hi",
+        "tudo bem", "como vai", "e aí", "salve", "hey"
     ]
     
-    pergunta_lower = pergunta.lower()
+    pergunta_lower = pergunta.lower().strip()
+    
+    # Se for apenas uma saudação simples, não é pergunta técnica
+    if any(saudacao in pergunta_lower for saudacao in saudacoes) and len(pergunta_lower) < 50:
+        return False
+    
+    # Palavras técnicas mais específicas
+    palavras_tecnicas = [
+        "banco de dados", "database", "quantas leis", "quantidade de leis", 
+        "número de leis", "tecnologia", "como funciona", "funcionamento",
+        "arquitetura", "sistema funciona", "dados indexados", "informações técnicas", 
+        "estatísticas", "você tem acesso", "possui dados", "disponível no sistema", 
+        "indexadas", "armazenadas", "como o sistema"
+    ]
+    
     return any(palavra in pergunta_lower for palavra in palavras_tecnicas)
