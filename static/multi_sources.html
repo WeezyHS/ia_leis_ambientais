@@ -240,6 +240,7 @@
 
         <div class="nav-tabs">
             <button class="nav-tab active" onclick="showTab('status')">Status das Fontes</button>
+            <button class="nav-tab" onclick="showTab('coema')">🏛️ COEMA</button>
             <button class="nav-tab" onclick="showTab('add-url')">Adicionar por URL</button>
             <button class="nav-tab" onclick="showTab('add-custom')">Adicionar Personalizado</button>
             <button class="nav-tab" onclick="showTab('collect')">Coletar Dados</button>
@@ -255,6 +256,62 @@
                 </div>
             </div>
             <button class="btn" onclick="loadSourcesStatus()">🔄 Atualizar Status</button>
+        </div>
+
+        <!-- Tab: COEMA -->
+        <div id="coema" class="tab-content">
+            <h2>🏛️ COEMA - Conselho Estadual de Meio Ambiente</h2>
+            <p>Gerencie os documentos do Conselho Estadual de Meio Ambiente do Tocantins</p>
+            
+            <div class="status-card">
+                <h3>Informações do COEMA</h3>
+                <div id="coema-info">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Carregando informações do COEMA...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="status-card">
+                <h3>Status dos Documentos</h3>
+                <div id="coema-stats">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Carregando estatísticas...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="status-card">
+                <h3>Documentos Disponíveis</h3>
+                <div id="coema-documents">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Carregando documentos...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <button class="btn" onclick="indexCOEMADocuments()">📚 Indexar Documentos do COEMA</button>
+                <button class="btn btn-secondary" onclick="loadCOEMAData()">🔄 Atualizar Dados</button>
+                <button class="btn btn-secondary" onclick="searchCOEMA()">🔍 Buscar no COEMA</button>
+                <button class="btn btn-danger" onclick="deleteCOEMAIndex()">🗑️ Remover Índice</button>
+            </div>
+
+            <!-- Área de busca no COEMA -->
+            <div class="status-card" style="display: none;" id="coema-search-area">
+                <h3>Buscar Documentos do COEMA</h3>
+                <form id="coema-search-form">
+                    <div class="form-group">
+                        <label for="coema-query">Consulta:</label>
+                        <input type="text" id="coema-query" name="coema-query" placeholder="Digite sua consulta sobre o COEMA..." required>
+                    </div>
+                    <button type="submit" class="btn">🔍 Buscar</button>
+                </form>
+                <div id="coema-search-results"></div>
+            </div>
         </div>
 
         <!-- Tab: Adicionar por URL -->
@@ -372,6 +429,8 @@
             // Carrega dados específicos da tab
             if (tabName === 'status' || tabName === 'collect') {
                 loadSourcesStatus();
+            } else if (tabName === 'coema') {
+                loadCOEMAData();
             }
         }
 
@@ -626,6 +685,220 @@
                 
             } catch (error) {
                 showMessage(`Erro ao iniciar coleta: ${error.message}`, 'error');
+            }
+        });
+
+        // Funções específicas do COEMA
+        async function loadCOEMAData() {
+            await Promise.all([
+                loadCOEMAInfo(),
+                loadCOEMAStats(),
+                loadCOEMADocuments()
+            ]);
+        }
+
+        async function loadCOEMAInfo() {
+            const infoDiv = document.getElementById('coema-info');
+            infoDiv.innerHTML = '<div class="loading"><div class="spinner"></div><p>Carregando informações...</p></div>';
+            
+            try {
+                const response = await fetch('/coema/info');
+                const data = await response.json();
+                
+                let infoHtml = `
+                    <div class="source-item">
+                        <div>
+                            <h4>${data.name}</h4>
+                            <p><strong>Descrição:</strong> ${data.description}</p>
+                            <p><strong>Website:</strong> <a href="${data.website}" target="_blank">${data.website}</a></p>
+                            <p><strong>Última atualização:</strong> ${data.last_update}</p>
+                            <p><strong>Namespace:</strong> ${data.namespace}</p>
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <h4>Tipos de documentos disponíveis:</h4>
+                        <ul>
+                `;
+                
+                data.documents_types.forEach(type => {
+                    infoHtml += `<li>${type}</li>`;
+                });
+                
+                infoHtml += '</ul></div>';
+                infoDiv.innerHTML = infoHtml;
+                
+            } catch (error) {
+                infoDiv.innerHTML = `<div class="alert alert-error">Erro ao carregar informações: ${error.message}</div>`;
+            }
+        }
+
+        async function loadCOEMAStats() {
+            const statsDiv = document.getElementById('coema-stats');
+            statsDiv.innerHTML = '<div class="loading"><div class="spinner"></div><p>Carregando estatísticas...</p></div>';
+            
+            try {
+                const response = await fetch('/coema/stats');
+                const data = await response.json();
+                
+                if (data.stats) {
+                    let statsHtml = `
+                        <div class="source-item">
+                            <div>
+                                <h4>📊 Estatísticas do Índice</h4>
+                                <p><strong>Total de vetores:</strong> ${data.stats.total_vectors || 0}</p>
+                                <p><strong>Dimensões:</strong> ${data.stats.dimension || 'N/A'}</p>
+                                <p><strong>Namespace:</strong> ${data.stats.namespace || 'coema'}</p>
+                            </div>
+                        </div>
+                    `;
+                    statsDiv.innerHTML = statsHtml;
+                } else {
+                    statsDiv.innerHTML = '<div class="alert alert-info">Nenhum documento indexado ainda</div>';
+                }
+                
+            } catch (error) {
+                statsDiv.innerHTML = `<div class="alert alert-error">Erro ao carregar estatísticas: ${error.message}</div>`;
+            }
+        }
+
+        async function loadCOEMADocuments() {
+            const documentsDiv = document.getElementById('coema-documents');
+            documentsDiv.innerHTML = '<div class="loading"><div class="spinner"></div><p>Carregando documentos...</p></div>';
+            
+            try {
+                const response = await fetch('/coema/documents');
+                const data = await response.json();
+                
+                if (data.documents && data.documents.length > 0) {
+                    let documentsHtml = `<p><strong>Total:</strong> ${data.total_documents} documentos</p>`;
+                    
+                    data.documents.slice(0, 10).forEach(doc => {
+                        documentsHtml += `
+                            <div class="source-item">
+                                <div>
+                                    <h4>${doc.title}</h4>
+                                    <p><strong>Tipo:</strong> ${doc.type} | <strong>Ano:</strong> ${doc.year || 'N/A'}</p>
+                                    <p><strong>Tamanho:</strong> ${doc.content_length} caracteres</p>
+                                    <p><strong>URL:</strong> <a href="${doc.url}" target="_blank">Ver documento</a></p>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    if (data.documents.length > 10) {
+                        documentsHtml += `<p><em>... e mais ${data.documents.length - 10} documentos</em></p>`;
+                    }
+                    
+                    documentsDiv.innerHTML = documentsHtml;
+                } else {
+                    documentsDiv.innerHTML = '<div class="alert alert-info">Nenhum documento encontrado</div>';
+                }
+                
+            } catch (error) {
+                documentsDiv.innerHTML = `<div class="alert alert-error">Erro ao carregar documentos: ${error.message}</div>`;
+            }
+        }
+
+        async function indexCOEMADocuments() {
+            try {
+                showMessage('Iniciando indexação dos documentos do COEMA...', 'info');
+                
+                const response = await fetch('/coema/index/sync', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showMessage(`✅ ${data.message}. Documentos indexados: ${data.indexed_documents}/${data.total_documents}`, 'success');
+                    loadCOEMAStats(); // Atualiza as estatísticas
+                } else {
+                    showMessage(`❌ ${data.message}`, 'error');
+                }
+                
+            } catch (error) {
+                showMessage(`Erro ao indexar documentos: ${error.message}`, 'error');
+            }
+        }
+
+        function searchCOEMA() {
+            const searchArea = document.getElementById('coema-search-area');
+            searchArea.style.display = searchArea.style.display === 'none' ? 'block' : 'none';
+        }
+
+        async function deleteCOEMAIndex() {
+            if (!confirm('Tem certeza que deseja remover todos os documentos do COEMA do índice?')) {
+                return;
+            }
+            
+            try {
+                showMessage('Removendo índice do COEMA...', 'info');
+                
+                const response = await fetch('/coema/index', {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showMessage(`✅ ${data.message}`, 'success');
+                    loadCOEMAStats(); // Atualiza as estatísticas
+                } else {
+                    showMessage(`❌ ${data.message}`, 'error');
+                }
+                
+            } catch (error) {
+                showMessage(`Erro ao remover índice: ${error.message}`, 'error');
+            }
+        }
+
+        // Event listener para busca no COEMA
+        document.addEventListener('DOMContentLoaded', () => {
+            const coemaSearchForm = document.getElementById('coema-search-form');
+            if (coemaSearchForm) {
+                coemaSearchForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    
+                    const query = document.getElementById('coema-query').value;
+                    const resultsDiv = document.getElementById('coema-search-results');
+                    
+                    try {
+                        resultsDiv.innerHTML = '<div class="loading"><div class="spinner"></div><p>Buscando...</p></div>';
+                        
+                        const response = await fetch('/coema/search', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ query: query })
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (response.ok && data.results && data.results.length > 0) {
+                            let resultsHtml = `<h4>Resultados encontrados (${data.results.length}):</h4>`;
+                            
+                            data.results.forEach((result, index) => {
+                                resultsHtml += `
+                                    <div class="source-item">
+                                        <div>
+                                            <h4>Resultado ${index + 1} (Score: ${result.score.toFixed(3)})</h4>
+                                            <p>${result.content.substring(0, 300)}...</p>
+                                            <p><strong>Fonte:</strong> ${result.metadata.source || 'COEMA'}</p>
+                                        </div>
+                                    </div>
+                                `;
+                            });
+                            
+                            resultsDiv.innerHTML = resultsHtml;
+                        } else {
+                            resultsDiv.innerHTML = '<div class="alert alert-info">Nenhum resultado encontrado</div>';
+                        }
+                        
+                    } catch (error) {
+                        resultsDiv.innerHTML = `<div class="alert alert-error">Erro na busca: ${error.message}</div>`;
+                    }
+                });
             }
         });
 
