@@ -8,6 +8,7 @@ from app.services.custom_prompt import QA_CUSTOM_PROMPT
 from app.services.text_normalizer import normalizar_texto, normalizar_pergunta_busca
 from app.services.enhanced_retriever import buscar_documentos_com_normalizacao
 from app.services.database_stats import detectar_pergunta_tecnica, gerar_resposta_tecnica
+from app.services.coema_service import COEMAService
 
 def extrair_numero_lei(pergunta: str):
     # Captura formatos com ou sem ponto, com ou sem espaços
@@ -31,6 +32,9 @@ llm = ChatOpenAI(
     api_key=os.getenv("OPENAI_API_KEY")
 )
 
+# Instância do serviço COEMA
+coema_service = COEMAService()
+
 qa_chain = RetrievalQA.from_chain_type(
     llm=llm,
     chain_type="stuff",
@@ -41,7 +45,47 @@ qa_chain = RetrievalQA.from_chain_type(
     }
 )
 
+def detectar_saudacao(pergunta: str) -> bool:
+    """Detecta se a mensagem é apenas uma saudação simples"""
+    saudacoes = [
+        "olá", "oi", "bom dia", "boa tarde", "boa noite", "hello", "hi",
+        "tudo bem", "como vai", "e aí", "salve", "hey", "opa"
+    ]
+    
+    pergunta_lower = pergunta.lower().strip()
+    
+    # Se for uma saudação simples (curta) sem outras palavras relevantes
+    if len(pergunta_lower) < 50 and any(saudacao in pergunta_lower for saudacao in saudacoes):
+        # Verifica se não contém palavras relacionadas a leis
+        palavras_leis = ["lei", "decreto", "resolução", "ambiental", "tocantins", "coema"]
+        if not any(palavra in pergunta_lower for palavra in palavras_leis):
+            return True
+    
+    return False
+
+def gerar_resposta_saudacao() -> str:
+    """Gera uma resposta amigável para saudações"""
+    return """Olá! 👋 
+
+Sou a IA especializada em **Leis Ambientais do Tocantins**, da **Plêiade Ambiental**. 
+
+🌿 Posso ajudá-lo com:
+• Consultas sobre leis ambientais específicas
+• Informações sobre licenciamento ambiental
+• Dados do COEMA (Conselho Estadual do Meio Ambiente)
+• Regulamentações e decretos ambientais
+
+Como posso ajudá-lo hoje?"""
+
 def consultar_lei(pergunta: str) -> dict:
+    # 🤝 Verifica se é apenas uma saudação
+    if detectar_saudacao(pergunta):
+        return {
+            "resposta": gerar_resposta_saudacao(),
+            "leis_relacionadas": [],
+            "tipo_resposta": "saudacao"
+        }
+    
     # 🔧 Verifica se é uma pergunta técnica sobre o sistema
     if detectar_pergunta_tecnica(pergunta):
         resposta_tecnica = gerar_resposta_tecnica(pergunta)
@@ -103,10 +147,38 @@ def consultar_lei(pergunta: str) -> dict:
     # Busca documentos usando normalização de texto
     documentos_normalizados = buscar_documentos_com_normalizacao(pergunta_enriquecida, k=4)
     
-    # Se encontrou documentos com busca normalizada, usa eles
-    if documentos_normalizados:
+    # 🏛️ Busca também no COEMA
+    documentos_coema = []
+    try:
+        resultados_coema = coema_service.search_coema_documents(pergunta_enriquecida, top_k=2)
+        if resultados_coema:
+            # Converte resultados do COEMA para formato compatível
+            for resultado in resultados_coema:
+                # Cria um objeto similar ao Document do LangChain
+                class COEMADocument:
+                    def __init__(self, content, metadata):
+                        self.page_content = content
+                        self.metadata = metadata
+                
+                doc_coema = COEMADocument(
+                    content=resultado['content'],
+                    metadata={
+                        **resultado['metadata'],
+                        'fonte': 'COEMA',
+                        'score': resultado['score']
+                    }
+                )
+                documentos_coema.append(doc_coema)
+    except Exception as e:
+        print(f"Erro ao buscar no COEMA: {e}")
+    
+    # Combina documentos das diferentes fontes
+    todos_documentos = documentos_normalizados + documentos_coema
+    
+    # Se encontrou documentos, usa eles
+    if todos_documentos:
         # Cria contexto a partir dos documentos encontrados
-        contexto = "\n\n".join([doc.page_content for doc in documentos_normalizados])
+        contexto = "\n\n".join([doc.page_content for doc in todos_documentos])
         
         # Usa o prompt customizado para gerar resposta
         prompt_formatado = QA_CUSTOM_PROMPT.format(
@@ -116,7 +188,7 @@ def consultar_lei(pergunta: str) -> dict:
         
         resposta_llm = llm.invoke(prompt_formatado)
         resposta = resposta_llm.content
-        documentos = documentos_normalizados
+        documentos = todos_documentos
     else:
         # Fallback para busca padrão
         resultado = qa_chain(pergunta_enriquecida)
@@ -141,15 +213,21 @@ def consultar_lei(pergunta: str) -> dict:
         titulo = doc.metadata.get("titulo", "Sem título")
         descricao = doc.metadata.get("descricao", "")
         conteudo = doc.page_content
+        fonte = doc.metadata.get("fonte", "Legislação")
         
         # Extrair número da lei do título
         lei_no_titulo = extrair_numero_lei(titulo)
+        
+        # Adiciona identificação da fonte se for COEMA
+        if fonte == "COEMA":
+            titulo = f"[COEMA] {titulo}"
         
         leis_relacionadas.append({
             "titulo": titulo,
             "descricao": descricao,
             "conteudo": conteudo,
-            "numero_lei": lei_no_titulo if lei_no_titulo else "N/A"
+            "numero_lei": lei_no_titulo if lei_no_titulo else "N/A",
+            "fonte": fonte
         })
 
     return {
