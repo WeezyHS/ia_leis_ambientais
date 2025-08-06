@@ -30,7 +30,9 @@ def extrair_numero_lei(pergunta: str):
 llm = ChatOpenAI(
     model="gpt-4o-mini",
     temperature=0,
-    api_key=os.getenv("OPENAI_API_KEY")
+    api_key=os.getenv("OPENAI_API_KEY"),
+    max_tokens=2000,
+    request_timeout=45
 )
 
 # Instância do serviço COEMA
@@ -39,7 +41,7 @@ coema_service = COEMAService()
 qa_chain = RetrievalQA.from_chain_type(
     llm=llm,
     chain_type="stuff",
-    retriever=vectorstore.as_retriever(search_kwargs={"k": 4}),
+    retriever=vectorstore.as_retriever(search_kwargs={"k": 3}),
     return_source_documents=True,
     chain_type_kwargs={
         "prompt": QA_CUSTOM_PROMPT
@@ -157,7 +159,7 @@ def consultar_lei(pergunta: str) -> dict:
         pergunta_enriquecida = f"Sobre a Lei {numero_lei}: {pergunta_normalizada}"
     
     # Busca documentos usando a nova função que inclui ABNT
-    resultados_busca = search_similar_documents(pergunta_enriquecida, top_k=8)
+    resultados_busca = search_similar_documents(pergunta_enriquecida, top_k=5)
     
     # Converte resultados para formato compatível
     documentos_normalizados = []
@@ -184,7 +186,7 @@ def consultar_lei(pergunta: str) -> dict:
     # 🏛️ Busca também no COEMA
     documentos_coema = []
     try:
-        resultados_coema = coema_service.search_coema_documents(pergunta_enriquecida, top_k=2)
+        resultados_coema = coema_service.search_coema_documents(pergunta_enriquecida, top_k=1)
         if resultados_coema:
             # Converte resultados do COEMA para formato compatível
             for resultado in resultados_coema:
