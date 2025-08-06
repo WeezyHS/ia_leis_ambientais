@@ -255,6 +255,12 @@
             background: rgba(255, 255, 255, 0.5);
         }
 
+        /* Animação do cursor de digitação */
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
         /* Responsivo */
         @media (max-width: 768px) {
             .header {
@@ -284,7 +290,7 @@
         <div class="messages-container" id="messagesContainer">
             <div class="welcome-message">
                 <h2>Bem-vindo ao Assistente da Plêiade Ambiental! 🌿</h2>
-                <p>Faça perguntas sobre as leis ambientais.</p>
+                <p>Faça perguntas sobre leis ambientais.</p>
             </div>
         </div>
 
@@ -353,8 +359,8 @@
 
                 const data = await response.json();
                 
-                // Add assistant response
-                addMessage(data.resposta || 'Não foi possível gerar uma resposta.', 'assistant');
+                // Add assistant response with typewriter animation
+                addMessage(data.resposta || 'Não foi possível gerar uma resposta.', 'assistant', true);
                 
             } catch (error) {
                 console.error('Erro:', error);
@@ -365,7 +371,7 @@
             }
         });
 
-        function addMessage(content, sender) {
+        function addMessage(content, sender, animate = false) {
             // Remove welcome message if it exists
             const welcomeMessage = document.querySelector('.welcome-message');
             if (welcomeMessage) {
@@ -382,10 +388,6 @@
             const contentDiv = document.createElement('div');
             contentDiv.className = 'message-content';
             
-            // Format content with basic markdown support
-            const formattedContent = formatMessage(content);
-            contentDiv.innerHTML = formattedContent;
-            
             if (sender === 'user') {
                 messageDiv.appendChild(contentDiv);
                 messageDiv.appendChild(avatar);
@@ -396,17 +398,126 @@
             
             messagesContainer.appendChild(messageDiv);
             
+            if (animate && sender === 'assistant') {
+                // Animação de digitação para respostas da IA
+                typewriterEffect(contentDiv, content);
+            } else {
+                // Exibição imediata para mensagens do usuário
+                const formattedContent = formatMessage(content);
+                contentDiv.innerHTML = formattedContent;
+            }
+            
             // Scroll to bottom
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
 
+        function typewriterEffect(element, text) {
+            // Calcula velocidade adaptativa baseada no tamanho do texto
+            const textLength = text.length;
+            let baseSpeed;
+            let useAcceleration = false;
+            
+            if (textLength <= 200) {
+                baseSpeed = 25; // Textos curtos: mais devagar para melhor experiência
+            } else if (textLength <= 500) {
+                baseSpeed = 15; // Textos médios: velocidade moderada
+            } else if (textLength <= 1000) {
+                baseSpeed = 8;  // Textos longos: mais rápido
+            } else if (textLength <= 2000) {
+                baseSpeed = 5;  // Textos muito longos: bem rápido
+                useAcceleration = true; // Ativa aceleração progressiva
+            } else {
+                baseSpeed = 3;  // Textos enormes: muito rápido
+                useAcceleration = true; // Ativa aceleração progressiva
+            }
+            
+            let index = 0;
+            element.innerHTML = '';
+            
+            // Adiciona cursor piscando
+            const cursor = document.createElement('span');
+            cursor.innerHTML = '|';
+            cursor.style.animation = 'blink 1s infinite';
+            cursor.style.opacity = '0.7';
+            element.appendChild(cursor);
+            
+            function typeNextChar() {
+                if (index < text.length) {
+                    // Remove cursor temporariamente
+                    if (cursor.parentNode) {
+                        element.removeChild(cursor);
+                    }
+                    
+                    // Adiciona próximo caractere e aplica formatação
+                    const currentText = text.substring(0, index + 1);
+                    element.innerHTML = formatMessage(currentText);
+                    
+                    // Adiciona cursor de volta
+                    element.appendChild(cursor);
+                    
+                    index++;
+                    
+                    // Scroll automático durante a digitação
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                    
+                    // Calcula velocidade dinâmica com aceleração progressiva
+                    let currentSpeed = baseSpeed;
+                    if (useAcceleration && textLength > 1000) {
+                        // Acelera progressivamente após 30% do texto
+                        const progress = index / textLength;
+                        if (progress > 0.3) {
+                            const accelerationFactor = Math.min(3, 1 + (progress - 0.3) * 4);
+                            currentSpeed = Math.max(1, Math.floor(baseSpeed / accelerationFactor));
+                        }
+                    }
+                    
+                    setTimeout(typeNextChar, currentSpeed);
+                } else {
+                    // Animação completa - remove cursor e aplica formatação final
+                    if (cursor.parentNode) {
+                        element.removeChild(cursor);
+                    }
+                    element.innerHTML = formatMessage(text);
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                }
+            }
+            
+            // Inicia a animação
+            typeNextChar();
+        }
+
         function formatMessage(content) {
-            // Basic markdown formatting
-            return content
+            // Escape HTML first to prevent issues
+            let formatted = content
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+            
+            // Apply markdown formatting
+            formatted = formatted
+                // Bold text (**text**)
                 .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                // Italic text (*text*)
                 .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                // Line breaks
                 .replace(/\n/g, '<br>')
-                .replace(/📊|🏛️|📄|📅|📋|🔧|💾|🤖|📐|🔍|⚙️|🔄|🔍|📈|🌿|❌/g, '<span style="font-size: 1.1em;">$&</span>');
+                // Emojis with larger size
+                .replace(/(📊|🏛️|📄|📅|📋|🔧|💾|🤖|📐|🔍|⚙️|🔄|📈|🌿|❌|✅|⚡|🎯|🚀|📏)/g, '<span style="font-size: 1.1em;">$1</span>')
+                // Headers (### text)
+                .replace(/^### (.*$)/gm, '<h3 style="margin: 10px 0 5px 0; color: #2c3e50; font-size: 1.1em;">$1</h3>')
+                // Headers (## text)
+                .replace(/^## (.*$)/gm, '<h2 style="margin: 15px 0 8px 0; color: #2c3e50; font-size: 1.2em;">$1</h2>')
+                // Headers (# text)
+                .replace(/^# (.*$)/gm, '<h1 style="margin: 20px 0 10px 0; color: #2c3e50; font-size: 1.3em;">$1</h1>')
+                // Lists (- item or * item)
+                .replace(/^[\-\*] (.+$)/gm, '<li style="margin: 2px 0;">$1</li>')
+                // Numbered lists (1. item)
+                .replace(/^\d+\. (.+$)/gm, '<li style="margin: 2px 0;">$1</li>');
+            
+            // Wrap consecutive <li> elements in <ul>
+            formatted = formatted.replace(/(<li[^>]*>.*?<\/li>(?:\s*<li[^>]*>.*?<\/li>)*)/gs, '<ul style="margin: 5px 0; padding-left: 20px;">$1</ul>');
+            
+            return formatted;
         }
 
         function setLoading(loading) {

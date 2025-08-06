@@ -253,6 +253,265 @@ class IbamaScraper(BaseScraper):
         text_lower = text.lower()
         return any(keyword in text_lower for keyword in keywords)
 
+class CONAMAScraper(BaseScraper):
+    """Scraper para resoluções do CONAMA"""
+    
+    def __init__(self):
+        super().__init__("CONAMA", "https://conama.mma.gov.br")
+        
+    def extract_documents(self) -> List[Dict]:
+        """Extrai resoluções do CONAMA usando dados já coletados"""
+        documents = []
+        
+        # Carrega dados já coletados do CONAMA
+        conama_files = [
+            "conama_data_20250805_150217.json",
+            "conama_data_20250805_145759.json"
+        ]
+        
+        for filename in conama_files:
+            if os.path.exists(filename):
+                try:
+                    with open(filename, 'r', encoding='utf-8') as f:
+                        conama_data = json.load(f)
+                    
+                    for doc in conama_data:
+                        # Verifica se tem conteúdo útil
+                        if doc.get('text') and doc['text'] not in ['Download', '']:
+                            documents.append({
+                                'source': 'CONAMA',
+                                'url': doc['url'],
+                                'text': doc['text'],
+                                'type': 'ato_normativo',
+                                'collected_at': doc.get('collected_at', datetime.now().isoformat()),
+                                'ano': doc.get('ano'),
+                                'tipo_ato': doc.get('tipo_ato'),
+                                'status': doc.get('status', 'vigente')
+                            })
+                            
+                except Exception as e:
+                    print(f"Erro ao carregar {filename}: {e}")
+                    
+        return documents
+        
+    def is_relevant_document(self, text: str) -> bool:
+        """Documentos do CONAMA são sempre relevantes"""
+        return len(text) > 10  # Qualquer conteúdo mínimo
+
+class ABNTScraper(BaseScraper):
+    """Scraper para normas da ABNT - apenas normas vigentes"""
+    
+    def __init__(self):
+        super().__init__("ABNT", "https://www.abntcatalogo.com.br")
+        self.environmental_terms = [
+            "ambiental", "meio ambiente", "poluição", "resíduos", "água", "ar",
+            "solo", "sustentabilidade", "ecologia", "biodiversidade", "clima",
+            "emissões", "efluentes", "gestão ambiental", "ISO 14001", "licenciamento"
+        ]
+        
+    def extract_documents(self) -> List[Dict]:
+        """Extrai normas da ABNT que estão vigentes"""
+        documents = []
+        
+        try:
+            # Configura o driver
+            self.setup_driver()
+            
+            # Acessa a página principal do catálogo
+            print("Acessando o catálogo ABNT...")
+            self.driver.get("https://www.abntcatalogo.com.br/pav.aspx")
+            time.sleep(5)
+            
+            for term in self.environmental_terms:
+                try:
+                    print(f"Buscando normas ABNT para: {term}")
+                    
+                    # Aguardar a página carregar completamente
+                    wait = WebDriverWait(self.driver, 15)
+                    wait.until(EC.presence_of_element_located((By.ID, "ctl00_cphPagina_txtNM_Palavra")))
+                    
+                    # Localizar campo de pesquisa por palavra-chave
+                    search_field = self.driver.find_element(By.ID, "ctl00_cphPagina_txtNM_Palavra")
+                    
+                    # Garantir que apenas normas ABNT vigentes sejam buscadas
+                    # Verificar se checkbox ABNT está marcado
+                    abnt_checkbox = self.driver.find_element(By.ID, "cphPagina_chkNM_ABNT")
+                    if not abnt_checkbox.is_selected():
+                        abnt_checkbox.click()
+                        time.sleep(1)
+                    
+                    # Garantir que apenas normas ativas sejam buscadas
+                    active_checkbox = self.driver.find_element(By.ID, "cphPagina_chkNM_Ativo")
+                    if not active_checkbox.is_selected():
+                        active_checkbox.click()
+                        time.sleep(1)
+                    
+                    # Desmarcar normas canceladas se estiver marcado
+                    cancelled_checkbox = self.driver.find_element(By.ID, "cphPagina_chkNM_Cancelada")
+                    if cancelled_checkbox.is_selected():
+                        cancelled_checkbox.click()
+                        time.sleep(1)
+                    
+                    # Limpar campo e inserir termo
+                    search_field.clear()
+                    time.sleep(1)
+                    search_field.send_keys(term)
+                    time.sleep(1)
+                    
+                    # Clicar no botão de busca
+                    search_button = self.driver.find_element(By.ID, "cphPagina_cmdNM_Buscar")
+                    search_button.click()
+                    
+                    # Aguardar resultados
+                    time.sleep(5)
+                    
+                    # Extrair resultados
+                    standards = self._extract_search_results()
+                    documents.extend(standards)
+                    
+                    print(f"Encontradas {len(standards)} normas para o termo '{term}'")
+                    
+                    # Voltar para a página de busca para próximo termo
+                    self.driver.get("https://www.abntcatalogo.com.br/pav.aspx")
+                    time.sleep(3)
+                    
+                except Exception as e:
+                    print(f"Erro ao buscar '{term}': {e}")
+                    continue
+                    
+        except Exception as e:
+            print(f"Erro geral no scraper ABNT: {e}")
+        finally:
+            self.cleanup_driver()
+            
+        # Remover duplicatas
+        unique_documents = []
+        seen_codes = set()
+        
+        for doc in documents:
+            code = doc.get('codigo', '')
+            if code and code not in seen_codes:
+                unique_documents.append(doc)
+                seen_codes.add(code)
+                
+        return unique_documents
+        
+    def _extract_search_results(self) -> List[Dict]:
+        """Extrai os resultados da busca"""
+        standards = []
+        
+        try:
+            # Aguardar carregamento dos resultados
+            time.sleep(3)
+            
+            # Procurar por tabelas de resultados ou listas
+            result_tables = self.driver.find_elements(By.CSS_SELECTOR, "table")
+            
+            # Se encontrou tabelas, processar
+            for table in result_tables:
+                rows = table.find_elements(By.TAG_NAME, "tr")
+                for row in rows[1:]:  # Pular cabeçalho
+                    try:
+                        cells = row.find_elements(By.TAG_NAME, "td")
+                        if len(cells) >= 2:
+                            standard_data = self._extract_standard_from_row(cells)
+                            if standard_data and self.is_relevant_document(standard_data.get('titulo', '') + ' ' + standard_data.get('resumo', '')):
+                                standards.append(standard_data)
+                    except Exception as e:
+                        continue
+            
+            # Se não encontrou resultados estruturados, tentar extrair do HTML
+            if not standards:
+                standards = self._extract_from_page_content()
+                
+        except Exception as e:
+            print(f"Erro ao extrair resultados: {e}")
+        
+        return standards
+        
+    def _extract_standard_from_row(self, cells) -> Optional[Dict]:
+        """Extrai dados de uma linha de tabela"""
+        try:
+            # Assumindo estrutura típica: código, título, status, etc.
+            codigo = cells[0].text.strip() if len(cells) > 0 else "N/A"
+            titulo = cells[1].text.strip() if len(cells) > 1 else "N/A"
+            status = cells[2].text.strip() if len(cells) > 2 else "Vigente"
+            
+            # Verificar se é vigente
+            if "cancelad" in status.lower() or "withdraw" in status.lower() or "inativ" in status.lower():
+                return None
+            
+            return {
+                'source': self.name,
+                'url': self.driver.current_url,
+                'codigo': codigo,
+                'titulo': titulo,
+                'status': status,
+                'text': titulo,
+                'type': 'norma_abnt',
+                'collected_at': datetime.now().isoformat(),
+                'resumo': titulo,
+                'escopo': "",
+                'comite': ""
+            }
+            
+        except Exception as e:
+            return None
+            
+    def _extract_from_page_content(self) -> List[Dict]:
+        """Extrai normas do conteúdo da página quando não há estrutura clara"""
+        standards = []
+        
+        try:
+            page_text = self.driver.page_source
+            
+            # Procurar por padrões de normas ABNT
+            import re
+            
+            # Padrão para normas ABNT NBR
+            nbr_pattern = r'(ABNT\s+NBR\s+\d+(?:-\d+)?(?::\d{4})?)'  
+            matches = re.findall(nbr_pattern, page_text, re.IGNORECASE)
+            
+            for match in matches:
+                # Criar entrada básica para cada norma encontrada
+                if self.is_relevant_document(match):
+                    standard = {
+                        'source': self.name,
+                        'url': self.driver.current_url,
+                        'codigo': match,
+                        'titulo': f"Norma {match}",
+                        'status': "Vigente",
+                        'text': f"Norma técnica {match} da ABNT",
+                        'type': 'norma_abnt',
+                        'collected_at': datetime.now().isoformat(),
+                        'resumo': f"Norma técnica {match} da ABNT",
+                        'escopo': "",
+                        'comite': ""
+                    }
+                    standards.append(standard)
+            
+        except Exception as e:
+            print(f"Erro ao extrair do conteúdo da página: {e}")
+        
+        return standards
+            
+    def is_relevant_document(self, text: str) -> bool:
+        """Verifica se é norma ambiental relevante"""
+        if len(text) < 10:  # Muito pouco conteúdo
+            return False
+            
+        environmental_keywords = [
+            "ambiental", "meio ambiente", "poluição", "resíduos",
+            "água", "ar", "solo", "gestão ambiental", "sustentabilidade",
+            "emissões", "efluentes", "tratamento", "qualidade ambiental",
+            "impacto ambiental", "conservação", "preservação",
+            "saneamento", "efluente", "atmosfera", "ruído", "vibração",
+            "ecologia", "biodiversidade", "clima", "iso 14001", "licenciamento"
+        ]
+        
+        text_lower = text.lower()
+        return any(keyword in text_lower for keyword in environmental_keywords)
+
 class MultiSourceCollector:
     """Coordenador para coleta de múltiplas fontes"""
     
@@ -261,6 +520,8 @@ class MultiSourceCollector:
             TocantinsAssembleiaScraper(),
             PlanaltoScraper(),
             IbamaScraper(),
+            CONAMAScraper(),
+            ABNTScraper(),
         ]
         
     def add_scraper(self, scraper: BaseScraper):

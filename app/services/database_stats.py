@@ -171,13 +171,26 @@ def detectar_pergunta_tecnica(pergunta: str) -> bool:
     if any(saudacao in pergunta_lower for saudacao in saudacoes) and len(pergunta_lower) < 50:
         return False
     
-    # Palavras técnicas mais específicas
-    palavras_tecnicas = [
-        "banco de dados", "database", "quantas leis", "quantidade de leis", 
-        "número de leis", "tecnologia", "como funciona", "funcionamento",
-        "arquitetura", "sistema funciona", "dados indexados", "informações técnicas", 
-        "estatísticas", "você tem acesso", "possui dados", "disponível no sistema", 
-        "indexadas", "armazenadas", "como o sistema"
+    # Verifica se contém termos legais/ambientais - se sim, NÃO é pergunta técnica
+    termos_legais = [
+        "licenciamento", "ambiental", "lei", "decreto", "resolução", "coema",
+        "meio ambiente", "florestal", "sustentável", "impacto ambiental",
+        "eia", "rima", "averbação", "compensação", "multa", "infração",
+        "órgão ambiental", "ibama", "icmbio", "naturatins", "conama"
     ]
     
-    return any(palavra in pergunta_lower for palavra in palavras_tecnicas)
+    # Se contém termos legais, não é pergunta técnica sobre o sistema
+    if any(termo in pergunta_lower for termo in termos_legais):
+        return False
+    
+    # Palavras técnicas específicas sobre o SISTEMA (não sobre legislação)
+    palavras_tecnicas_sistema = [
+        "banco de dados", "database", "quantas leis", "quantidade de leis", 
+        "número de leis", "tecnologia", "arquitetura", "dados indexados", 
+        "informações técnicas", "estatísticas", "você tem acesso", "possui dados", 
+        "disponível no sistema", "indexadas", "armazenadas", "como o sistema funciona",
+        "funcionamento do sistema", "como funciona o sistema", "sistema funciona"
+    ]
+    
+    # Verifica se é especificamente sobre o sistema, não sobre temas legais
+    return any(palavra in pergunta_lower for palavra in palavras_tecnicas_sistema)

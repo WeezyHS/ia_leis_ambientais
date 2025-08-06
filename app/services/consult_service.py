@@ -3,12 +3,13 @@ import re
 from langchain.chat_models import ChatOpenAI
 from langchain.chains import RetrievalQA
 from langchain_core.prompts import PromptTemplate
-from app.services.pinecone_service import vectorstore
+from app.services.pinecone_service import vectorstore, search_similar_documents
 from app.services.custom_prompt import QA_CUSTOM_PROMPT
 from app.services.text_normalizer import normalizar_texto, normalizar_pergunta_busca
 from app.services.enhanced_retriever import buscar_documentos_com_normalizacao
 from app.services.database_stats import detectar_pergunta_tecnica, gerar_resposta_tecnica
 from app.services.coema_service import COEMAService
+from app.services.lei_filter import filtrar_leis_revogadas
 
 def extrair_numero_lei(pergunta: str):
     # Captura formatos com ou sem ponto, com ou sem espaços
@@ -77,6 +78,8 @@ Sou a IA especializada em **Leis Ambientais do Tocantins**, da **Plêiade Ambien
 
 Como posso ajudá-lo hoje?"""
 
+
+
 def consultar_lei(pergunta: str) -> dict:
     # 🤝 Verifica se é apenas uma saudação
     if detectar_saudacao(pergunta):
@@ -115,9 +118,18 @@ def consultar_lei(pergunta: str) -> dict:
         )
 
         if documentos:
+            # 🗑️ Filtra leis revogadas
+            documentos_vigentes = filtrar_leis_revogadas(documentos)
+            
+            if not documentos_vigentes:
+                return {
+                    "resposta": f"A Lei {numero_lei} foi encontrada, mas está **revogada** e não é mais aplicável. Para consultas sobre legislação vigente, tente uma busca mais ampla sobre o tema.",
+                    "leis_relacionadas": []
+                }
+            
             # Formatamos a resposta para incluir o título da lei e seu conteúdo
             conteudo_formatado = []
-            for doc in documentos:
+            for doc in documentos_vigentes:
                 titulo = doc.metadata.get("titulo", "Sem título")
                 descricao = doc.metadata.get("descricao", "")
                 conteudo_formatado.append(f"**{titulo}**\n\n{descricao}\n\n{doc.page_content}")
@@ -131,7 +143,7 @@ def consultar_lei(pergunta: str) -> dict:
                     "conteudo": doc.page_content,
                     "numero_lei": numero_lei
                 }
-                for doc in documentos
+                for doc in documentos_vigentes
             ]
             return {
                 "resposta": resposta,
@@ -144,8 +156,30 @@ def consultar_lei(pergunta: str) -> dict:
     if numero_lei:
         pergunta_enriquecida = f"Sobre a Lei {numero_lei}: {pergunta_normalizada}"
     
-    # Busca documentos usando normalização de texto
-    documentos_normalizados = buscar_documentos_com_normalizacao(pergunta_enriquecida, k=4)
+    # Busca documentos usando a nova função que inclui ABNT
+    resultados_busca = search_similar_documents(pergunta_enriquecida, top_k=8)
+    
+    # Converte resultados para formato compatível
+    documentos_normalizados = []
+    for resultado in resultados_busca:
+        # Cria um objeto similar ao Document do LangChain
+        class SearchDocument:
+            def __init__(self, content, metadata):
+                self.page_content = content
+                self.metadata = metadata
+        
+        doc = SearchDocument(
+            content=resultado['texto'],
+            metadata={
+                **resultado['metadado'],
+                'tipo_fonte': resultado.get('tipo', 'LEI'),
+                'score': resultado.get('score', 0)
+            }
+        )
+        documentos_normalizados.append(doc)
+    
+    # 🗑️ Filtra leis revogadas
+    documentos_normalizados = filtrar_leis_revogadas(documentos_normalizados)
     
     # 🏛️ Busca também no COEMA
     documentos_coema = []
@@ -175,6 +209,9 @@ def consultar_lei(pergunta: str) -> dict:
     # Combina documentos das diferentes fontes
     todos_documentos = documentos_normalizados + documentos_coema
     
+    # 🗑️ Filtra leis revogadas dos documentos combinados
+    todos_documentos = filtrar_leis_revogadas(todos_documentos)
+    
     # Se encontrou documentos, usa eles
     if todos_documentos:
         # Cria contexto a partir dos documentos encontrados
@@ -194,6 +231,9 @@ def consultar_lei(pergunta: str) -> dict:
         resultado = qa_chain(pergunta_enriquecida)
         resposta = resultado["result"]
         documentos = resultado.get("source_documents", [])
+        
+        # 🗑️ Filtra leis revogadas do fallback
+        documentos = filtrar_leis_revogadas(documentos)
 
     # Extraímos os números das leis citadas na resposta para destacar
     numeros_leis_citadas = set()
@@ -214,12 +254,32 @@ def consultar_lei(pergunta: str) -> dict:
         descricao = doc.metadata.get("descricao", "")
         conteudo = doc.page_content
         fonte = doc.metadata.get("fonte", "Legislação")
+        tipo_fonte = doc.metadata.get("tipo_fonte", "LEI")
         
-        # Extrair número da lei do título
+        # Extrair número da lei do título (para leis tradicionais)
         lei_no_titulo = extrair_numero_lei(titulo)
         
+        # Para documentos ABNT, usar o código ABNT como identificador
+        if tipo_fonte == "ABNT" or "ABNT" in titulo or "NBR" in titulo:
+            # Extrair código ABNT do título ou metadados
+            codigo_abnt = doc.metadata.get("codigo", "")
+            if not codigo_abnt and titulo:
+                # Tentar extrair código do título
+                import re
+                match = re.search(r'(ABNT\s+NBR\s+[A-Z]*\s*\d+(?:[-:]\d+)?)', titulo)
+                if match:
+                    codigo_abnt = match.group(1)
+            
+            # Usar código ABNT como número da lei
+            if codigo_abnt:
+                lei_no_titulo = codigo_abnt
+            
+            # Adicionar identificação ABNT no título se não estiver presente
+            if not titulo.startswith("[ABNT]") and not "ABNT" in titulo:
+                titulo = f"[ABNT] {titulo}"
+        
         # Adiciona identificação da fonte se for COEMA
-        if fonte == "COEMA":
+        elif fonte == "COEMA":
             titulo = f"[COEMA] {titulo}"
         
         leis_relacionadas.append({
