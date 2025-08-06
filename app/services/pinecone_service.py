@@ -3,15 +3,75 @@ load_dotenv()
 
 from langchain_openai import OpenAIEmbeddings
 from langchain_pinecone import PineconeVectorStore
+from pinecone import Pinecone
 import os
 
 index_name = os.getenv("PINECONE_INDEX_NAME", "leis-ambientais")
 embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
 vectorstore = PineconeVectorStore(index_name=index_name, embedding=embeddings)
 
+# Conexão direta com Pinecone para busca com namespace
+pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
+pinecone_index = pc.Index(index_name)
+
 def search_similar_documents(texto: str, top_k: int = 5):
-    docs = vectorstore.similarity_search(texto, k=top_k)
-    return [{"texto": d.page_content, "metadado": d.metadata} for d in docs]
+    """Busca documentos similares incluindo normas ABNT"""
+    
+    # Gera embedding da consulta
+    query_embedding = embeddings.embed_query(texto)
+    
+    # Busca em diferentes namespaces
+    abnt_results = []
+    leis_results = []
+    coema_results = []
+    
+    try:
+        # Busca no namespace ABNT
+        abnt_response = pinecone_index.query(
+            vector=query_embedding,
+            top_k=3,
+            namespace="abnt-normas",
+            include_metadata=True
+        )
+        
+        for match in abnt_response.matches:
+             if match.score > 0.3:  # Filtro de relevância mais permissivo
+                 # Para ABNT, o texto está no campo 'text' dos metadados
+                 texto_abnt = match.metadata.get('text', match.metadata.get('content', match.metadata.get('conteudo', '')))
+                 abnt_results.append({
+                     "texto": texto_abnt,
+                     "metadado": match.metadata,
+                     "tipo": "ABNT",
+                     "score": match.score
+                 })
+    except Exception as e:
+        print(f"Erro na busca ABNT: {e}")
+    
+    try:
+        # Busca no namespace padrão (leis)
+        leis_response = pinecone_index.query(
+            vector=query_embedding,
+            top_k=5,
+            namespace="",
+            include_metadata=True
+        )
+        
+        for match in leis_response.matches:
+             if match.score > 0.3:  # Filtro de relevância mais permissivo
+                 leis_results.append({
+                     "texto": match.metadata.get('conteudo', match.metadata.get('content', '')),
+                     "metadado": match.metadata,
+                     "tipo": "LEI",
+                     "score": match.score
+                 })
+    except Exception as e:
+        print(f"Erro na busca leis: {e}")
+    
+    # Combina e ordena resultados por score
+    all_results = abnt_results + leis_results + coema_results
+    all_results.sort(key=lambda x: x.get('score', 0), reverse=True)
+    
+    return all_results[:top_k]
 
 def indexar_no_pinecone(itens):
     """

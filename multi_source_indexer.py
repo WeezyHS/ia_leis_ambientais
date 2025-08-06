@@ -15,6 +15,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from app.services.multi_source_scraper import MultiSourceCollector
 from app.services.embedding_service import gerar_embedding
 from app.services.pinecone_service import indexar_no_pinecone
+from app.services.lei_filter import filtrar_leis_revogadas
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 class MultiSourceIndexer:
@@ -41,10 +42,15 @@ class MultiSourceIndexer:
             
         print(f"\nTotal de documentos coletados: {len(documents)}")
         
-        # 2. Salva backup dos dados coletados
+        # 2. Filtra leis revogadas
+        print("\nFiltrando leis revogadas...")
+        documents = filtrar_leis_revogadas(documents)
+        print(f"Documentos após filtro: {len(documents)}")
+        
+        # 3. Salva backup dos dados coletados
         self.collector.save_to_file(documents, "backup_multi_source.json")
         
-        # 3. Processa e indexa cada documento
+        # 4. Processa e indexa cada documento
         self._process_and_index_documents(documents)
         
     def _process_and_index_documents(self, documents: List[Dict]):
