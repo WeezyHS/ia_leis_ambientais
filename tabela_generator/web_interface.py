@@ -219,26 +219,91 @@ def get_theme_css():
                 border-color: #94a3b8;
             }
             
-            /* Inputs - Modo escuro */
-            .stTextArea > div > div > textarea {
-                background-color: #1e293b;
-                color: #e2e8f0;
-                border: 2px solid #475569;
-                border-radius: 12px;
-                transition: all 0.3s ease;
+            /* Inputs - Modo escuro - Correção ULTRA específica */
+            /* TextArea - Todos os seletores possíveis */
+            .stTextArea textarea,
+            .stTextArea > div > div > textarea,
+            textarea[data-testid="stTextArea"],
+            [data-testid="stTextArea"] textarea,
+            [data-testid="stTextArea"] > div > div > textarea,
+            div[data-testid="stTextArea"] textarea,
+            div[data-testid="stTextArea"] > div > div > textarea,
+            .css-1cpxqw2 textarea,
+            .css-1d391kg textarea,
+            .css-16huue1 textarea,
+            .css-1v0mbdj textarea,
+            .css-12oz5g7 textarea,
+            .css-1kyxreq textarea {
+                background-color: #1e293b !important;
+                background: #1e293b !important;
+                color: #e2e8f0 !important;
+                border: 2px solid #475569 !important;
+                border-radius: 12px !important;
+                transition: all 0.3s ease !important;
+                font-size: 14px !important;
+                line-height: 1.5 !important;
+                padding: 12px !important;
+                font-family: 'Inter', sans-serif !important;
+                -webkit-text-fill-color: #e2e8f0 !important;
+                opacity: 1 !important;
             }
             
-            .stTextArea > div > div > textarea:focus {
-                border-color: #64748b;
-                box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.1);
+            /* Focus states */
+            .stTextArea textarea:focus,
+            .stTextArea > div > div > textarea:focus,
+            textarea[data-testid="stTextArea"]:focus,
+            [data-testid="stTextArea"] textarea:focus,
+            [data-testid="stTextArea"] > div > div > textarea:focus,
+            div[data-testid="stTextArea"] textarea:focus,
+            div[data-testid="stTextArea"] > div > div > textarea:focus,
+            .css-1cpxqw2 textarea:focus,
+            .css-1d391kg textarea:focus,
+            .css-16huue1 textarea:focus,
+            .css-1v0mbdj textarea:focus,
+            .css-12oz5g7 textarea:focus,
+            .css-1kyxreq textarea:focus {
+                border-color: #64748b !important;
+                box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.1) !important;
+                background-color: #1e293b !important;
+                background: #1e293b !important;
+                color: #e2e8f0 !important;
+                -webkit-text-fill-color: #e2e8f0 !important;
+                outline: none !important;
             }
             
-            .stSelectbox > div > div > select {
-                background-color: #1e293b;
-                color: #e2e8f0;
-                border: 2px solid #475569;
-                border-radius: 12px;
+            /* Placeholder text */
+            .stTextArea textarea::placeholder,
+            textarea[data-testid="stTextArea"]::placeholder {
+                color: #94a3b8 !important;
+                opacity: 0.7 !important;
             }
+            
+            /* Containers das caixas de texto - Modo escuro */
+            .stTextArea,
+            .stTextArea > div,
+            .stTextArea > div > div,
+            [data-testid="stTextArea"],
+            [data-testid="stTextArea"] > div,
+            [data-testid="stTextArea"] > div > div,
+            div[data-testid="stTextArea"],
+            div[data-testid="stTextArea"] > div,
+            div[data-testid="stTextArea"] > div > div {
+                background-color: transparent !important;
+                background: transparent !important;
+            }
+            
+            .stSelectbox > div > div > select,
+            .stSelectbox select,
+            select[data-testid="stSelectbox"],
+            [data-testid="stSelectbox"] > div > div > select,
+            [data-testid="stSelectbox"] select {
+                background-color: #1e293b !important;
+                color: #e2e8f0 !important;
+                border: 2px solid #475569 !important;
+                border-radius: 12px !important;
+            }
+            
+
             
             /* Checkbox - Modo escuro */
             .stCheckbox > label {
@@ -433,29 +498,103 @@ def get_theme_css():
                 transform: translateY(0);
             }
             
-            /* Inputs modernos */
-            .stTextArea > div > div > textarea {
-                border-radius: 12px;
-                border: 2px solid #e2e8f0;
-                transition: all 0.3s ease;
-                font-family: 'Inter', sans-serif;
+            /* Inputs modernos - Correção ULTRA específica */
+            /* TextArea - Todos os seletores possíveis - Modo claro */
+            .stTextArea textarea,
+            .stTextArea > div > div > textarea,
+            textarea[data-testid="stTextArea"],
+            [data-testid="stTextArea"] textarea,
+            [data-testid="stTextArea"] > div > div > textarea,
+            div[data-testid="stTextArea"] textarea,
+            div[data-testid="stTextArea"] > div > div > textarea,
+            .css-1cpxqw2 textarea,
+            .css-1d391kg textarea,
+            .css-16huue1 textarea,
+            .css-1v0mbdj textarea,
+            .css-12oz5g7 textarea,
+            .css-1kyxreq textarea {
+                background-color: #ffffff !important;
+                background: #ffffff !important;
+                color: #1f2937 !important;
+                border: 2px solid #e2e8f0 !important;
+                border-radius: 12px !important;
+                transition: all 0.3s ease !important;
+                font-family: 'Inter', sans-serif !important;
+                font-size: 14px !important;
+                line-height: 1.5 !important;
+                padding: 12px !important;
+                -webkit-text-fill-color: #1f2937 !important;
+                opacity: 1 !important;
             }
             
-            .stTextArea > div > div > textarea:focus {
-                border-color: #3b82f6;
-                box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+            /* Focus states - Modo claro */
+            .stTextArea textarea:focus,
+            .stTextArea > div > div > textarea:focus,
+            textarea[data-testid="stTextArea"]:focus,
+            [data-testid="stTextArea"] textarea:focus,
+            [data-testid="stTextArea"] > div > div > textarea:focus,
+            div[data-testid="stTextArea"] textarea:focus,
+            div[data-testid="stTextArea"] > div > div > textarea:focus,
+            .css-1cpxqw2 textarea:focus,
+            .css-1d391kg textarea:focus,
+            .css-16huue1 textarea:focus,
+            .css-1v0mbdj textarea:focus,
+            .css-12oz5g7 textarea:focus,
+            .css-1kyxreq textarea:focus {
+                border-color: #3b82f6 !important;
+                box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+                background-color: #ffffff !important;
+                background: #ffffff !important;
+                color: #1f2937 !important;
+                -webkit-text-fill-color: #1f2937 !important;
+                outline: none !important;
             }
             
-            .stSelectbox > div > div > select {
-                border-radius: 12px;
-                border: 2px solid #e2e8f0;
-                transition: all 0.3s ease;
+            /* Placeholder text - Modo claro */
+            .stTextArea textarea::placeholder,
+            textarea[data-testid="stTextArea"]::placeholder {
+                color: #6b7280 !important;
+                opacity: 0.7 !important;
             }
             
-            .stSelectbox > div > div > select:focus {
-                border-color: #3b82f6;
-                box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+            /* Containers das caixas de texto - Modo claro */
+            .stTextArea,
+            .stTextArea > div,
+            .stTextArea > div > div,
+            [data-testid="stTextArea"],
+            [data-testid="stTextArea"] > div,
+            [data-testid="stTextArea"] > div > div,
+            div[data-testid="stTextArea"],
+            div[data-testid="stTextArea"] > div,
+            div[data-testid="stTextArea"] > div > div {
+                background-color: transparent !important;
+                background: transparent !important;
             }
+            
+            .stSelectbox > div > div > select,
+            .stSelectbox select,
+            select[data-testid="stSelectbox"],
+            [data-testid="stSelectbox"] > div > div > select,
+            [data-testid="stSelectbox"] select {
+                background-color: #ffffff !important;
+                color: #1f2937 !important;
+                border: 2px solid #e2e8f0 !important;
+                border-radius: 12px !important;
+                transition: all 0.3s ease !important;
+            }
+            
+            .stSelectbox > div > div > select:focus,
+            .stSelectbox select:focus,
+            select[data-testid="stSelectbox"]:focus,
+            [data-testid="stSelectbox"] > div > div > select:focus,
+            [data-testid="stSelectbox"] select:focus {
+                border-color: #3b82f6 !important;
+                box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+                background-color: #ffffff !important;
+                color: #1f2937 !important;
+            }
+            
+
             
             /* Checkbox moderno */
             .stCheckbox > label {
@@ -668,9 +807,8 @@ def main():
         st.markdown("### <i class='fas fa-lightbulb icon-sidebar'></i>Como usar:", unsafe_allow_html=True)
         st.markdown("""
         <i class='fas fa-edit icon-sidebar'></i>1. **Descreva** como quer organizar os dados<br>
-        <i class='fas fa-check-square icon-sidebar'></i>2. **Escolha** fonte: só leis ou todas as fontes<br>
-        <i class='fas fa-play icon-sidebar'></i>3. **Visualize** o resultado<br>
-        <i class='fas fa-download icon-sidebar'></i>4. **Baixe** a tabela gerada
+        <i class='fas fa-play icon-sidebar'></i>2. **Visualize** o resultado<br>
+        <i class='fas fa-download icon-sidebar'></i>3. **Baixe** a tabela gerada
         """, unsafe_allow_html=True)
         
         st.markdown("### <i class='fas fa-clipboard-list icon-sidebar'></i>Exemplos de descrições:", unsafe_allow_html=True)
@@ -694,12 +832,7 @@ def main():
             height=100
         )
         
-        # Opção para escolher fonte de dados
-        incluir_todas_fontes = st.checkbox(
-            "🌐 Incluir TODAS as fontes (Power BI, ABNT, COEMA, etc.)",
-            value=True,
-            help="Se marcado, inclui dados de todas as fontes. Se desmarcado, apenas leis estaduais do TO."
-        )
+
         
         col_btn1, col_btn2 = st.columns(2)
         
@@ -730,12 +863,8 @@ def main():
         st.markdown("### <i class='fas fa-cog icon'></i>Configurações", unsafe_allow_html=True)
         
         if btn_dados:
-            if incluir_todas_fontes:
-                limite_documentos = st.slider("📊 Número de documentos", 5, 100, 20)
-                st.info(f"📊 Incluindo dados de todas as fontes ({total_todas_fontes} disponíveis)")
-            else:
-                limite_documentos = st.slider("🏛️ Número de leis", 5, 50, 10)
-                st.info(f"🏛️ Apenas leis estaduais do TO ({total_leis} disponíveis)")
+            limite_documentos = st.slider("🏛️ Número de leis", 5, 50, 10)
+            st.info(f"🏛️ Leis estaduais do TO ({total_leis} disponíveis)")
         else:
             limite_documentos = 10
         
@@ -783,13 +912,10 @@ def main():
                     df_resultado = st.session_state.ia_tabela.popular_tabela(
                         estrutura, 
                         num_documentos=limite_documentos, 
-                        incluir_todas_fontes=incluir_todas_fontes
+                        incluir_todas_fontes=False
                     )
                     
-                    if incluir_todas_fontes:
-                        st.markdown(f"### 📋 Tabela com {len(df_resultado)} Documentos de Todas as Fontes")
-                    else:
-                        st.markdown(f"### 📋 Tabela com {len(df_resultado)} Leis Estaduais")
+                    st.markdown(f"### 📋 Tabela com {len(df_resultado)} Leis Estaduais")
                 
                 # Mostrar tabela
                 st.dataframe(df_resultado, use_container_width=True)
