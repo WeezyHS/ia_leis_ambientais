@@ -685,7 +685,7 @@ def main():
         
         formato_download = st.selectbox(
             "Formato para download",
-            ["excel", "csv"],
+            ["Excel", "CSV"],
             index=0
         )
     
