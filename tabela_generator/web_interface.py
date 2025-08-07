@@ -60,6 +60,34 @@ def get_theme_css():
                 background-color: #0f172a !important;
             }
             
+            /* Corrigir detalhes pretos - Elementos específicos */
+            .css-1kyxreq, .css-12oz5g7, .css-1v0mbdj, .css-16huue1, 
+            .css-1inwz65, .css-1cpxqw2, .css-1vencpc, .css-1y4p8pa,
+            .css-1lcbmhc, .css-17eq0hr, .css-1aumxhk, .css-1d391kg,
+            [data-testid="stSidebar"] > div, [data-testid="stSidebar"] > div > div,
+            .css-1544g2n, .css-1d391kg > div, .css-1d391kg > div > div {
+                background-color: #0f172a !important;
+                color: #e2e8f0 !important;
+            }
+            
+            /* Corrigir bordas e separadores pretos */
+            .css-1kyxreq::before, .css-12oz5g7::before, .css-1v0mbdj::before,
+            .css-16huue1::before, .css-1inwz65::before, .css-1cpxqw2::before,
+            .css-1vencpc::before, .css-1y4p8pa::before, .css-1lcbmhc::before,
+            .css-17eq0hr::before, .css-1aumxhk::before, .css-1d391kg::before {
+                background-color: #334155 !important;
+                border-color: #475569 !important;
+            }
+            
+            /* Corrigir elementos de interface pretos */
+            .css-1kyxreq *, .css-12oz5g7 *, .css-1v0mbdj *, .css-16huue1 *,
+            .css-1inwz65 *, .css-1cpxqw2 *, .css-1vencpc *, .css-1y4p8pa *,
+            .css-1lcbmhc *, .css-17eq0hr *, .css-1aumxhk *, .css-1d391kg *,
+            [data-testid="stSidebar"] *, [data-testid="stSidebar"] > div *,
+            .css-1544g2n *, .css-1d391kg > div *, .css-1d391kg > div > div * {
+                color: #e2e8f0 !important;
+            }
+            
             .main .block-container {
                 padding-top: 2rem;
                 padding-bottom: 2rem;
@@ -275,6 +303,34 @@ def get_theme_css():
             /* Toolbar do Streamlit - Modo claro */
             .css-14xtw13, .css-1y4p8pa {
                 background-color: #ffffff !important;
+            }
+            
+            /* Corrigir detalhes pretos - Modo claro */
+            .css-1kyxreq, .css-12oz5g7, .css-1v0mbdj, .css-16huue1, 
+            .css-1inwz65, .css-1cpxqw2, .css-1vencpc, .css-1y4p8pa,
+            .css-1lcbmhc, .css-17eq0hr, .css-1aumxhk, .css-1d391kg,
+            [data-testid="stSidebar"] > div, [data-testid="stSidebar"] > div > div,
+            .css-1544g2n, .css-1d391kg > div, .css-1d391kg > div > div {
+                background-color: #ffffff !important;
+                color: #1f2937 !important;
+            }
+            
+            /* Corrigir bordas e separadores pretos - Modo claro */
+            .css-1kyxreq::before, .css-12oz5g7::before, .css-1v0mbdj::before,
+            .css-16huue1::before, .css-1inwz65::before, .css-1cpxqw2::before,
+            .css-1vencpc::before, .css-1y4p8pa::before, .css-1lcbmhc::before,
+            .css-17eq0hr::before, .css-1aumxhk::before, .css-1d391kg::before {
+                background-color: #f1f5f9 !important;
+                border-color: #e2e8f0 !important;
+            }
+            
+            /* Corrigir elementos de interface pretos - Modo claro */
+            .css-1kyxreq *, .css-12oz5g7 *, .css-1v0mbdj *, .css-16huue1 *,
+            .css-1inwz65 *, .css-1cpxqw2 *, .css-1vencpc *, .css-1y4p8pa *,
+            .css-1lcbmhc *, .css-17eq0hr *, .css-1aumxhk *, .css-1d391kg *,
+            [data-testid="stSidebar"] *, [data-testid="stSidebar"] > div *,
+            .css-1544g2n *, .css-1d391kg > div *, .css-1d391kg > div > div * {
+                color: #1f2937 !important;
             }
             
             .main .block-container {
