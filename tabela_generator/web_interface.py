@@ -22,7 +22,12 @@ st.set_page_config(
     page_title="IA Tabelas - Leis Ambientais",
     page_icon="⚙️",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
+    menu_items={
+        'Get Help': None,
+        'Report a bug': None,
+        'About': None
+    }
 )
 
 # Inicializar estado do tema
@@ -48,22 +53,27 @@ def get_theme_css():
             .css-18e3th9, .css-1d391kg, .css-k1vhr4, .css-1y4p8pa, 
             header[data-testid="stHeader"], .stHeader, [data-testid="stHeader"] {
                 background-color: #0f172a !important;
+                color: #e2e8f0 !important;
             }
             
-            /* Container principal */
-            .css-k1vhr4, .css-18e3th9 {
-                background-color: #0f172a !important;
+            /* Ocultar menu de configurações do Streamlit */
+            button[title="View fullscreen"], 
+            button[aria-label="View fullscreen"],
+            [data-testid="stToolbar"],
+            .css-14xtw13.e8zbici0,
+            .css-vk3wp9,
+            .css-1kyxreq > .css-fblp2m,
+            .css-1kyxreq > .css-fblp2m > .css-1wivap2,
+            .css-1kyxreq > .css-fblp2m > .css-1wivap2 > .css-1lcbmhc,
+            .css-1kyxreq > .css-fblp2m > .css-1wivap2 > .css-1lcbmhc > .css-1outpf7,
+            .css-1kyxreq > .css-fblp2m > .css-1wivap2 > .css-1lcbmhc > .css-1outpf7 > .css-1wivap2,
+            .css-1kyxreq > .css-fblp2m > .css-1wivap2 > .css-1lcbmhc > .css-1outpf7 > .css-1wivap2 > .css-1lcbmhc {
+                display: none !important;
+                visibility: hidden !important;
             }
             
-            /* Toolbar do Streamlit */
-            .css-14xtw13, .css-1y4p8pa {
-                background-color: #0f172a !important;
-            }
-            
-            /* Corrigir detalhes pretos - Elementos específicos */
-            .css-1kyxreq, .css-12oz5g7, .css-1v0mbdj, .css-16huue1, 
-            .css-1inwz65, .css-1cpxqw2, .css-1vencpc, .css-1y4p8pa,
-            .css-1lcbmhc, .css-17eq0hr, .css-1aumxhk, .css-1d391kg,
+            /* Sidebar - Modo escuro */
+            [data-testid="stSidebar"], [data-testid="stSidebar"] > div,
             [data-testid="stSidebar"] > div, [data-testid="stSidebar"] > div > div,
             .css-1544g2n, .css-1d391kg > div, .css-1d391kg > div > div {
                 background-color: #0f172a !important;
@@ -75,8 +85,8 @@ def get_theme_css():
             .css-16huue1::before, .css-1inwz65::before, .css-1cpxqw2::before,
             .css-1vencpc::before, .css-1y4p8pa::before, .css-1lcbmhc::before,
             .css-17eq0hr::before, .css-1aumxhk::before, .css-1d391kg::before {
-                background-color: #334155 !important;
-                border-color: #475569 !important;
+                background-color: #1e293b !important;
+                border-color: #334155 !important;
             }
             
             /* Corrigir elementos de interface pretos */
@@ -317,6 +327,13 @@ def get_theme_css():
                 background: linear-gradient(135deg, #334155 0%, #475569 100%);
             }
             
+            /* Corrigir fundo interno da checkbox no modo escuro */
+            body.dark-mode div[data-testid="stCheckbox"] input[type="checkbox"] {
+                accent-color: #0ea5e9 !important; /* azul claro */
+                background-color: #1e293b !important;
+                border: 2px solid #475569 !important;
+            }
+            
             /* Métricas - Modo escuro */
             .metric-container {
                 background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
@@ -358,22 +375,27 @@ def get_theme_css():
             .css-18e3th9, .css-1d391kg, .css-k1vhr4, .css-1y4p8pa, 
             header[data-testid="stHeader"], .stHeader, [data-testid="stHeader"] {
                 background-color: #ffffff !important;
+                color: #1f2937 !important;
             }
             
-            /* Container principal - Modo claro */
-            .css-k1vhr4, .css-18e3th9 {
-                background-color: #ffffff !important;
+            /* Ocultar menu de configurações do Streamlit */
+            button[title="View fullscreen"], 
+            button[aria-label="View fullscreen"],
+            [data-testid="stToolbar"],
+            .css-14xtw13.e8zbici0,
+            .css-vk3wp9,
+            .css-1kyxreq > .css-fblp2m,
+            .css-1kyxreq > .css-fblp2m > .css-1wivap2,
+            .css-1kyxreq > .css-fblp2m > .css-1wivap2 > .css-1lcbmhc,
+            .css-1kyxreq > .css-fblp2m > .css-1wivap2 > .css-1lcbmhc > .css-1outpf7,
+            .css-1kyxreq > .css-fblp2m > .css-1wivap2 > .css-1lcbmhc > .css-1outpf7 > .css-1wivap2,
+            .css-1kyxreq > .css-fblp2m > .css-1wivap2 > .css-1lcbmhc > .css-1outpf7 > .css-1wivap2 > .css-1lcbmhc {
+                display: none !important;
+                visibility: hidden !important;
             }
             
-            /* Toolbar do Streamlit - Modo claro */
-            .css-14xtw13, .css-1y4p8pa {
-                background-color: #ffffff !important;
-            }
-            
-            /* Corrigir detalhes pretos - Modo claro */
-            .css-1kyxreq, .css-12oz5g7, .css-1v0mbdj, .css-16huue1, 
-            .css-1inwz65, .css-1cpxqw2, .css-1vencpc, .css-1y4p8pa,
-            .css-1lcbmhc, .css-17eq0hr, .css-1aumxhk, .css-1d391kg,
+            /* Sidebar - Modo claro */
+            [data-testid="stSidebar"], [data-testid="stSidebar"] > div,
             [data-testid="stSidebar"] > div, [data-testid="stSidebar"] > div > div,
             .css-1544g2n, .css-1d391kg > div, .css-1d391kg > div > div {
                 background-color: #ffffff !important;
@@ -571,6 +593,65 @@ def get_theme_css():
                 background: transparent !important;
             }
             
+            /* ===== CORREÇÕES ESPECÍFICAS PARA MODO CLARO ===== */
+            
+            /* 1. Corrigir cor dos labels e textos gerais */
+            .stRadio label, .stRadio span, label, span, .css-1cpxqw2 label, .css-1cpxqw2 span {
+                color: #1f2937 !important;
+            }
+            
+            /* 2. Correção para selectbox com classes padrão do Streamlit */
+            .css-1cpxqw2 select,
+            .css-16huue1 select,
+            .css-1v0mbdj select,
+            .css-12oz5g7 select {
+                background-color: #ffffff !important;
+                color: #1f2937 !important;
+                border: 2px solid #e2e8f0 !important;
+                border-radius: 12px !important;
+            }
+            
+            /* 3. Garantir que toda tipografia no modo claro seja visível */
+            html, body, [class*="css"], label, span, div, p, h1, h2, h3, h4, h5, h6 {
+                color: #1f2937 !important;
+            }
+            
+            /* 4. FORÇA MÁXIMA - Checkboxes BRANCAS no modo claro */
+            html body .stApp .stCheckbox > label, 
+            html body .stApp .stCheckbox > label > div, 
+            html body .stApp .stCheckbox > label > div > div,
+            html body .stApp .stCheckbox > label span, 
+            html body .stApp .stCheckbox label, 
+            html body .stApp .stCheckbox span,
+            html body .stApp [data-testid="stCheckbox"] label, 
+            html body .stApp [data-testid="stCheckbox"] span,
+            html body .stApp [data-testid="stCheckbox"] > label, 
+            html body .stApp [data-testid="stCheckbox"] > label > div,
+            html body .stApp div[data-testid="stCheckbox"] > label,
+            html body .stApp div[data-testid="stCheckbox"] > label > div {
+                color: #1f2937 !important;
+                background-color: #ffffff !important;
+                background: #ffffff !important;
+                background-image: none !important;
+                border: 2px solid #e2e8f0 !important;
+            }
+            
+            /* Corrigir fundo interno da checkbox no modo claro */
+            div[data-testid="stCheckbox"] input[type="checkbox"] {
+                accent-color: #3b82f6 !important; /* cor azul padrão, pode mudar */
+                background-color: #ffffff !important;
+                border: 2px solid #e2e8f0 !important;
+            }
+            
+            /* 5. FORÇA TOTAL - Sobrescrever QUALQUER gradiente escuro */
+             html body .stApp .stCheckbox > label[style*="background"],
+             html body .stApp .stCheckbox > label[style*="linear-gradient"] {
+                 background: #ffffff !important;
+                 background-color: #ffffff !important;
+                 background-image: none !important;
+             }
+            
+            /* Selectbox - Modo claro */
             .stSelectbox > div > div > select,
             .stSelectbox select,
             select[data-testid="stSelectbox"],
@@ -596,19 +677,21 @@ def get_theme_css():
             
 
             
-            /* Checkbox moderno */
+            /* Checkbox moderno - Modo claro */
             .stCheckbox > label {
-                background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-                padding: 1rem;
-                border-radius: 12px;
-                border: 2px solid #e2e8f0;
-                transition: all 0.3s ease;
-                cursor: pointer;
+                background: #ffffff !important;
+                color: #1f2937 !important;
+                padding: 1rem !important;
+                border-radius: 12px !important;
+                border: 2px solid #e2e8f0 !important;
+                transition: all 0.3s ease !important;
+                cursor: pointer !important;
             }
             
             .stCheckbox > label:hover {
-                border-color: #3b82f6;
-                background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+                border-color: #3b82f6 !important;
+                background: #f8fafc !important;
+                color: #1f2937 !important;
             }
             
             /* Slider moderno */
@@ -726,6 +809,8 @@ def get_theme_css():
                 font-size: 1em;
             }
         </style>
+        
+
         """
 
 # Aplicar CSS baseado no tema
@@ -753,6 +838,9 @@ def main():
         <h3>Organizador Inteligente de Dados Ambientais</h3>
     </div>
     """, unsafe_allow_html=True)
+    
+    # ⚠️ Destaque das premissas obrigatórias
+    st.info("⚠️ **PREMISSAS OBRIGATÓRIAS**: Este sistema lista APENAS legislações vigentes com títulos oficiais completos. Legislações revogadas ou substituídas são automaticamente omitidas.")
     
     # Inicializar IA
     if not inicializar_ia():
@@ -806,33 +894,174 @@ def main():
         
         st.markdown("### <i class='fas fa-lightbulb icon-sidebar'></i>Como usar:", unsafe_allow_html=True)
         st.markdown("""
-        <i class='fas fa-edit icon-sidebar'></i>1. **Descreva** como quer organizar os dados<br>
-        <i class='fas fa-play icon-sidebar'></i>2. **Visualize** o resultado<br>
-        <i class='fas fa-download icon-sidebar'></i>3. **Baixe** a tabela gerada
+        <i class='fas fa-map-marker-alt icon-sidebar'></i>1. **Selecione** o município do empreendimento<br>
+        <i class='fas fa-industry icon-sidebar'></i>2. **Escolha** o grupo de atividade<br>
+        <i class='fas fa-cog icon-sidebar'></i>3. **Configure** as esferas legais desejadas<br>
+        <i class='fas fa-play icon-sidebar'></i>4. **Gere** a estrutura e depois o quadro-resumo<br>
+        <i class='fas fa-download icon-sidebar'></i>5. **Baixe** o resultado nos formatos disponíveis
         """, unsafe_allow_html=True)
         
-        st.markdown("### <i class='fas fa-clipboard-list icon-sidebar'></i>Exemplos de descrições:", unsafe_allow_html=True)
+        st.markdown("### <i class='fas fa-exclamation-triangle icon-sidebar'></i>Premissas obrigatórias:", unsafe_allow_html=True)
         st.markdown("""
-        <i class='fas fa-file-contract icon-sidebar'></i>"Organizar por fonte e jurisdição"<br>
-        <i class='fas fa-certificate icon-sidebar'></i>"Tabela focada em normas técnicas"<br>
-        <i class='fas fa-folder icon-sidebar'></i>"Agrupar por tipo de documento"<br>
-        <i class='fas fa-file-alt icon-sidebar'></i>"Dados sobre licenciamento"<br>
-        <i class='fas fa-balance-scale icon-sidebar'></i>"Comparar fontes federais e estaduais"
+        <i class='fas fa-check-circle icon-sidebar'></i>**APENAS legislações VIGENTES** são listadas<br>
+        <i class='fas fa-file-alt icon-sidebar'></i>**Títulos oficiais** completos e status de vigência<br>
+        <i class='fas fa-ban icon-sidebar'></i>**Legislações revogadas/substituídas** são omitidas<br>
+        <i class='fas fa-balance-scale icon-sidebar'></i>Organizado por **esfera legal** (Federal, Estadual, Municipal)
+        """, unsafe_allow_html=True)
+        
+        st.markdown("### <i class='fas fa-target icon-sidebar'></i>Objetivo:", unsafe_allow_html=True)
+        st.markdown("""
+        **Quadro-resumo de legislações ambientais** aplicáveis a empreendimentos no Tocantins, 
+        organizadas por esfera legal e específicas para o município e atividade selecionados.
+        """, unsafe_allow_html=True)
+        
+        st.markdown("### <i class='fas fa-clipboard-list icon-sidebar'></i>Características do quadro:", unsafe_allow_html=True)
+        st.markdown("""
+        <i class='fas fa-leaf icon-sidebar'></i>Específico para **legislações ambientais**<br>
+        <i class='fas fa-map icon-sidebar'></i>Focado no **estado do Tocantins**<br>
+        <i class='fas fa-bullseye icon-sidebar'></i>Adaptado para **município e atividade** selecionados<br>
+        <i class='fas fa-clock icon-sidebar'></i>Dados atualizados e **status de vigência** verificado
         """, unsafe_allow_html=True)
     
     # Área principal
     col1, col2 = st.columns([2, 1])
     
     with col1:
-        st.markdown("### <i class='fas fa-edit icon'></i>Descrição da Tabela", unsafe_allow_html=True)
+        st.markdown("### <i class='fas fa-map-marker-alt icon'></i>Localização e Atividade", unsafe_allow_html=True)
         
-        descricao = st.text_area(
-            "Como você quer organizar os dados ambientais?",
-            placeholder="Ex: Organizar por fonte, comparando dados federais e estaduais sobre licenciamento",
-            height=100
+        col_input1, col_input2 = st.columns(2)
+        
+        # Lista de municípios do Tocantins
+        municipios_tocantins = [
+            "Palmas", "Araguaína", "Gurupi", "Porto Nacional", "Paraíso do Tocantins",
+            "Colinas do Tocantins", "Guaraí", "Tocantinópolis", "Formoso do Araguaia",
+            "Dianópolis", "Miracema do Tocantins", "Taguatinga", "Augustinópolis",
+            "Pedro Afonso", "Xambioá", "Alvorada", "Arraias", "Araguatins",
+            "Cristalândia", "Nova Olinda", "Ananás", "Outro município"
+        ]
+        
+        # Opção de modo de entrada
+        modo_entrada = st.radio(
+            "🎯 Modo de Entrada:",
+            options=["Comando Detalhado", "Seleção Manual"],
+            help="Escolha como deseja fornecer as informações do empreendimento"
         )
         
-
+        if modo_entrada == "Comando Detalhado":
+            st.markdown("### 📝 Descreva seu Projeto")
+            st.success("🎯 **Modo Inteligente Ativado:** Descreva seu projeto em linguagem natural e a IA extrairá automaticamente todas as informações necessárias!")
+            
+            # Exemplo expandido
+            with st.expander("📋 Ver Exemplo de Comando", expanded=False):
+                st.markdown("""
+                **Exemplo de comando completo:**
+                
+                *"Estou fazendo um estudo ambiental para regularizar a atividade de agricultura do município de Ananás no Tocantins, elabore um quadro com a legislação ambiental federal, estadual e municipal relacionada ao tipo de empreendimento no contexto de um licenciamento ambiental"*
+                
+                **A IA identificará automaticamente:**
+                - 📍 **Município:** Ananás
+                - 🏭 **Atividade:** Agricultura  
+                - ⚖️ **Esferas:** Federal, Estadual, Municipal
+                - 📋 **Contexto:** Licenciamento ambiental
+                """)
+            
+            # Campo para comando em linguagem natural
+            comando_usuario = st.text_area(
+                "💬 Descreva seu projeto em linguagem natural:",
+                placeholder='Exemplo: "Estou fazendo um estudo ambiental para regularizar a atividade de agricultura do município de Ananás no Tocantins, elabore um quadro com a legislação ambiental federal, estadual e municipal relacionada ao tipo de empreendimento no contexto de um licenciamento ambiental"',
+                height=150,
+                help="Descreva seu projeto, município, atividade e contexto em linguagem natural. Seja específico sobre o tipo de empreendimento e o contexto (licenciamento, regularização, etc.)"
+            )
+            
+            # Extrair informações automaticamente se o comando foi fornecido
+            municipio_extraido = ""
+            atividade_extraida = ""
+            
+            if comando_usuario:
+                # Extrair município
+                for mun in municipios_tocantins:
+                    if mun.lower() in comando_usuario.lower():
+                        municipio_extraido = mun
+                        break
+                
+                # Extrair atividade
+                atividades_map = {
+                    "agricultura": "Agricultura", "agrícola": "Agricultura", "agropecuária": "Agricultura",
+                    "pecuária": "Pecuária", "gado": "Pecuária", "bovino": "Pecuária", "suíno": "Pecuária",
+                    "indústria": "Indústria", "industrial": "Indústria", "fábrica": "Indústria",
+                    "mineração": "Mineração", "minério": "Mineração", "extração": "Mineração",
+                    "saneamento": "Saneamento", "água": "Saneamento", "esgoto": "Saneamento",
+                    "energia": "Energia", "elétrica": "Energia", "solar": "Energia", "eólica": "Energia"
+                }
+                
+                for palavra, atividade in atividades_map.items():
+                    if palavra in comando_usuario.lower():
+                        atividade_extraida = atividade
+                        break
+            
+            # Mostrar informações extraídas
+            if comando_usuario:
+                col_info1, col_info2 = st.columns(2)
+                with col_info1:
+                    st.info(f"🏙️ **Município identificado:** {municipio_extraido or 'Não identificado'}")
+                with col_info2:
+                    st.info(f"🏭 **Atividade identificada:** {atividade_extraida or 'Não identificada'}")
+            
+            # Usar valores extraídos ou permitir correção manual
+            with col_input1:
+                municipio = st.selectbox(
+                    "🏛️ Confirme o Município:",
+                    municipios_tocantins,
+                    index=municipios_tocantins.index(municipio_extraido) if municipio_extraido in municipios_tocantins else 0,
+                    help="Confirme ou corrija o município identificado"
+                )
+            
+            with col_input2:
+                atividades = [
+                    "Agricultura", "Pecuária", "Indústria", "Mineração", 
+                    "Saneamento", "Lazer e Turismo", "Energia", "Transporte",
+                    "Construção Civil", "Serviços", "Comércio", "Outros"
+                ]
+                grupo_atividade = st.selectbox(
+                    "🏭 Confirme a Atividade:",
+                    atividades,
+                    index=atividades.index(atividade_extraida) if atividade_extraida in atividades else 0,
+                    help="Confirme ou corrija a atividade identificada"
+                )
+            
+            # Usar o comando como descrição adicional
+            descricao = comando_usuario
+            
+        else:
+            # Modo de seleção manual (interface original)
+            with col_input1:
+                municipio = st.selectbox(
+                    "🏛️ Município do Tocantins",
+                    municipios_tocantins,
+                    index=0,
+                    help="Selecione o município onde será desenvolvido o empreendimento"
+                )
+            
+            with col_input2:
+                grupo_atividade = st.selectbox(
+                    "🏭 Grupo de Atividade",
+                    [
+                        "Agricultura", "Pecuária", "Indústria", "Mineração", 
+                        "Saneamento", "Lazer e Turismo", "Energia", "Transporte",
+                        "Construção Civil", "Serviços", "Comércio", "Outros"
+                    ],
+                    index=0,
+                    help="Selecione o tipo de atividade do empreendimento"
+                )
+            
+            st.markdown("### <i class='fas fa-edit icon'></i>Descrição Adicional (Opcional)", unsafe_allow_html=True)
+            
+            descricao = st.text_area(
+                "Informações específicas sobre o empreendimento (opcional)",
+                placeholder="Ex: Frigorífico de grande porte, Usina hidrelétrica, Loteamento residencial...",
+                height=80,
+                help="Informações adicionais que podem ajudar na seleção de legislações mais específicas"
+            )
         
         col_btn1, col_btn2 = st.columns(2)
         
@@ -854,19 +1083,22 @@ def main():
             }
             </style>
             """, unsafe_allow_html=True)
-            btn_vazia = st.button("📊 Gerar Tabela Vazia", use_container_width=True)
+            btn_estrutura = st.button("📋 Gerar Estrutura", use_container_width=True)
         
         with col_btn2:
-            btn_dados = st.button("📋 Gerar com Dados", use_container_width=True)
+            btn_quadro = st.button("⚖️ Gerar Quadro-Resumo", use_container_width=True)
     
     with col2:
         st.markdown("### <i class='fas fa-cog icon'></i>Configurações", unsafe_allow_html=True)
         
-        if btn_dados:
-            limite_documentos = st.slider("🏛️ Número de leis", 5, 50, 10)
-            st.info(f"🏛️ Leis estaduais do TO ({total_leis} disponíveis)")
-        else:
-            limite_documentos = 10
+        incluir_esferas = st.multiselect(
+            "⚖️ Esferas Legais",
+            ["Federal", "Estadual", "Municipal"],
+            default=["Federal", "Estadual", "Municipal"]
+        )
+        
+        limite_documentos = st.slider("📊 Máximo de legislações por esfera", 5, 20, 10)
+        st.info(f"🏛️ Base: {total_leis} leis estaduais do TO disponíveis")
         
         formato_download = st.selectbox(
             "Formato para download",
@@ -875,115 +1107,132 @@ def main():
         )
     
     # Processamento
-    if btn_vazia or btn_dados:
-        if not descricao.strip():
-            st.error("❌ Por favor, descreva como quer organizar a tabela!")
+    if btn_estrutura or btn_quadro:
+        # Validação básica
+        if not municipio or not grupo_atividade:
+            st.error("❌ Por favor, selecione o município e grupo de atividade!")
             return
         
-        with st.spinner("🤖 Processando com IA direcionada..."):
-            try:
-                # Gerar estrutura
-                estrutura = st.session_state.ia_tabela.gerar_estrutura_tabela(descricao)
-                
-                # Mostrar estrutura gerada
-                st.success("✅ Estrutura da tabela gerada com sucesso!")
-                
-                col_info1, col_info2 = st.columns(2)
-                
-                with col_info1:
-                    st.markdown(f"**<i class='fas fa-heading icon'></i>Título:** {estrutura['titulo_tabela']}", unsafe_allow_html=True)
-                    st.markdown(f"**<i class='fas fa-align-left icon'></i>Descrição:** {estrutura['descricao']}", unsafe_allow_html=True)
-                
-                with col_info2:
-                    st.markdown(f"**<i class='fas fa-filter icon'></i>Filtros:** {', '.join(estrutura.get('filtros_sugeridos', []))}", unsafe_allow_html=True)
-                    st.markdown(f"**<i class='fas fa-sort icon'></i>Ordenação:** {estrutura.get('ordenacao_padrao', 'Não definida')}", unsafe_allow_html=True)
-                
-                # Mostrar colunas
-                st.markdown("### <i class='fas fa-columns icon'></i>Estrutura das Colunas", unsafe_allow_html=True)
-                
-                colunas_df = pd.DataFrame(estrutura['colunas'])
-                st.dataframe(colunas_df, use_container_width=True)
-                
-                # Gerar tabela
-                if btn_vazia:
-                    df_resultado = st.session_state.ia_tabela.gerar_tabela_vazia(estrutura)
-                    st.markdown("### 📊 Tabela Vazia Gerada")
-                else:
-                    df_resultado = st.session_state.ia_tabela.popular_tabela(
-                        estrutura, 
-                        num_documentos=limite_documentos, 
-                        incluir_todas_fontes=False
+        if btn_estrutura:
+            with st.spinner("🔄 Gerando estrutura do quadro-resumo..."):
+                try:
+                    estrutura = st.session_state.ia_tabela.gerar_quadro_resumo_legislacoes(
+                        municipio=municipio,
+                        grupo_atividade=grupo_atividade,
+                        descricao_adicional=descricao,
+                        esferas_legais=incluir_esferas,
+                        comando_natural=(modo_entrada == "Comando Detalhado")
                     )
                     
-                    st.markdown(f"### 📋 Tabela com {len(df_resultado)} Leis Estaduais")
-                
-                # Mostrar tabela
-                st.dataframe(df_resultado, use_container_width=True)
-                
-                # Preparar dados para download
-                from io import BytesIO
-                excel_buffer = BytesIO()
-                df_resultado.to_excel(excel_buffer, index=False)
-                excel_buffer.seek(0)
-                
-                relatorio_md = st.session_state.ia_tabela.gerar_relatorio_tabela(estrutura, df_resultado)
-                
-                # Botões de download
-                col_dl1, col_dl2, col_dl3, col_dl4 = st.columns(4)
-                
-                with col_dl1:
-                    st.download_button(
-                        "📊 Excel",
-                        data=excel_buffer.getvalue(),
-                        file_name=f"{estrutura['titulo_tabela']}.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        use_container_width=True
+                    if estrutura:
+                        st.session_state.estrutura_atual = estrutura
+                        st.success("✅ Estrutura do quadro-resumo gerada com sucesso!")
+                        
+                        # Exibir estrutura
+                        st.subheader("📋 Estrutura do Quadro-Resumo")
+                        st.json(estrutura)
+                    else:
+                        st.error("❌ Erro ao gerar estrutura do quadro-resumo")
+                        
+                except Exception as e:
+                    st.error(f"❌ Erro ao gerar estrutura: {str(e)}")
+        
+        elif btn_quadro:
+            with st.spinner("🔄 Gerando quadro-resumo completo..."):
+                try:
+                    # Se não há estrutura, gerar automaticamente
+                    if 'estrutura_atual' not in st.session_state:
+                        st.info("🔄 Gerando estrutura automaticamente...")
+                        estrutura = st.session_state.ia_tabela.gerar_quadro_resumo_legislacoes(
+                            municipio=municipio,
+                            grupo_atividade=grupo_atividade,
+                            descricao_adicional=descricao,
+                            esferas=incluir_esferas,
+                            comando_natural=(modo_entrada == "Comando Detalhado")
+                        )
+                        st.session_state.estrutura_atual = estrutura
+                    
+                    # Gerar o quadro-resumo populado
+                    df_resultado = st.session_state.ia_tabela.popular_quadro_resumo(
+                        estrutura=st.session_state.estrutura_atual,
+                        municipio=municipio,
+                        grupo_atividade=grupo_atividade,
+                        esferas=incluir_esferas,
+                        limite_por_esfera=limite_documentos
                     )
+                    
+                    if df_resultado is not None and not df_resultado.empty:
+                        st.session_state.df_resultado = df_resultado
+                        st.success("✅ Quadro-resumo gerado com sucesso!")
+                        
+                        # Exibir título da tabela
+                        st.subheader(f"📊 Quadro-Resumo de Legislações Ambientais - {municipio}")
+                        st.caption(f"**Atividade:** {grupo_atividade} | **Esferas:** {', '.join(incluir_esferas)} | **Total:** {len(df_resultado)} legislações")
+                        
+                        # Exibir tabela
+                        st.dataframe(
+                            df_resultado,
+                            use_container_width=True,
+                            hide_index=True,
+                            column_config={
+                                "esfera": st.column_config.TextColumn("🏛️ Esfera", width="small"),
+                                "titulo_legislacao": st.column_config.TextColumn("📜 Título da Legislação", width="large"),
+                                "vigencia": st.column_config.TextColumn("⚖️ Vigência", width="small"),
+                                "descricao_resumida": st.column_config.TextColumn("📝 Descrição Resumida", width="large"),
+                                "aplicabilidade": st.column_config.TextColumn("🎯 Aplicabilidade", width="large")
+                            }
+                        )
+                    else:
+                        st.error("❌ Erro ao gerar quadro-resumo com dados")
+                        
+                except Exception as e:
+                    st.error(f"❌ Erro ao gerar quadro-resumo: {str(e)}")
+        
+        # Mostrar downloads se houver resultado
+        if 'df_resultado' in st.session_state and not st.session_state.df_resultado.empty:
+            df_resultado = st.session_state.df_resultado
                 
-                with col_dl2:
-                    st.download_button(
-                        "📄 CSV",
-                        data=df_resultado.to_csv(index=False),
-                        file_name=f"{estrutura['titulo_tabela']}.csv",
-                        mime="text/csv",
-                        use_container_width=True
-                    )
-                
-                with col_dl3:
-                    st.download_button(
-                        "🔧 JSON (Estrutura)",
-                        data=json.dumps(estrutura, indent=2, ensure_ascii=False),
-                        file_name=f"{estrutura['titulo_tabela']}_estrutura.json",
-                        mime="application/json",
-                        use_container_width=True
-                    )
-                
-                with col_dl4:
-                    st.download_button(
-                        "📋 Markdown (Relatório)",
-                        data=relatorio_md,
-                        file_name=f"{estrutura['titulo_tabela']}_relatorio.md",
-                        mime="text/markdown",
-                        use_container_width=True
-                    )
-                
-                # Estatísticas da tabela
-                st.markdown("### <i class='fas fa-chart-bar icon'></i>Estatísticas da Tabela", unsafe_allow_html=True)
-                col_stat1, col_stat2, col_stat3 = st.columns(3)
-                
-                with col_stat1:
-                    st.metric("📊 Total de Linhas", len(df_resultado))
-                
-                with col_stat2:
-                    st.metric("📋 Total de Colunas", len(df_resultado.columns))
-                
-                with col_stat3:
-                    fontes_unicas = df_resultado['Fonte'].nunique() if 'Fonte' in df_resultado.columns else 0
-                    st.metric("🌐 Fontes Diferentes", fontes_unicas)
-                
-            except Exception as e:
-                st.error(f"❌ Erro ao gerar tabela: {str(e)}")
-                st.error("💡 Tente descrever de forma mais específica ou verifique se a API está configurada.")
+            # Preparar dados para download
+            from io import BytesIO
+            excel_buffer = BytesIO()
+            df_resultado.to_excel(excel_buffer, index=False)
+            excel_buffer.seek(0)
+            
+            # Botões de download
+            st.markdown("### <i class='fas fa-download icon'></i>Downloads", unsafe_allow_html=True)
+            col_dl1, col_dl2 = st.columns(2)
+            
+            with col_dl1:
+                st.download_button(
+                    "📊 Baixar Excel",
+                    data=excel_buffer.getvalue(),
+                    file_name=f"quadro_resumo_{municipio}_{grupo_atividade}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True
+                )
+            
+            with col_dl2:
+                st.download_button(
+                    "📄 Baixar CSV",
+                    data=df_resultado.to_csv(index=False),
+                    file_name=f"quadro_resumo_{municipio}_{grupo_atividade}.csv",
+                    mime="text/csv",
+                    use_container_width=True
+                )
+            
+            # Estatísticas da tabela
+            st.markdown("### <i class='fas fa-chart-bar icon'></i>Estatísticas do Quadro-Resumo", unsafe_allow_html=True)
+            col_stat1, col_stat2, col_stat3 = st.columns(3)
+            
+            with col_stat1:
+                st.metric("📊 Total de Legislações", len(df_resultado))
+            
+            with col_stat2:
+                esferas_unicas = df_resultado['esfera'].nunique() if 'esfera' in df_resultado.columns else 0
+                st.metric("🏛️ Esferas Representadas", esferas_unicas)
+            
+            with col_stat3:
+                st.metric("📋 Total de Colunas", len(df_resultado.columns))
 
 # Rodapé
 st.markdown("---")
