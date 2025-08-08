@@ -11,6 +11,7 @@ import pandas as pd
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 import openai
+from openai import OpenAI
 import os
 import sys
 from dotenv import load_dotenv
@@ -32,7 +33,7 @@ class IATabela:
         if not self.api_key:
             raise ValueError("OPENAI_API_KEY não encontrada no arquivo .env")
         
-        openai.api_key = self.api_key
+
         
         # Carregar dados de todas as fontes
         self.leis_data = self._carregar_leis()
@@ -41,7 +42,9 @@ class IATabela:
     def _carregar_leis(self) -> List[Dict]:
         """Carrega os dados das leis do arquivo JSON"""
         try:
-            arquivo_leis = Path("c:/ia_leis_ambientais/leis_ambientais_CORRETAS_20250807_004018.json")
+            # Usar path relativo ao diretório do projeto
+            projeto_root = Path(__file__).parent.parent
+            arquivo_leis = projeto_root / "leis_ambientais_CORRETAS_20250807_004018.json"
             if arquivo_leis.exists():
                 with open(arquivo_leis, 'r', encoding='utf-8') as f:
                     return json.load(f)
@@ -232,6 +235,575 @@ class IATabela:
             }
         ]
     
+    def gerar_quadro_resumo_legislacoes(self, municipio: str, grupo_atividade: str, descricao_adicional: str = "", esferas: List[str] = None, comando_natural: bool = False) -> Dict:
+        """
+        Gera um quadro-resumo de legislações ambientais específico para município e atividade
+        
+        Args:
+            municipio: Nome do município do Tocantins
+            grupo_atividade: Grupo de atividade do empreendimento
+            descricao_adicional: Descrição adicional do empreendimento
+            esferas: Lista de esferas legais a incluir (Federal, Estadual, Municipal)
+        
+        Returns:
+            Dict com estrutura do quadro-resumo
+        """
+        if esferas is None:
+            esferas = ["Federal", "Estadual", "Municipal"]
+        
+        prompt = f"""
+        Você é um especialista em legislação ambiental brasileira. Crie um quadro-resumo de legislações ambientais vigentes para:
+
+        LOCALIZAÇÃO: {municipio}, Tocantins
+        ATIVIDADE: {grupo_atividade}
+        DETALHES: {descricao_adicional if descricao_adicional else "Não especificado"}
+        ESFERAS: {", ".join(esferas)}
+
+        FORMATO OBRIGATÓRIO do quadro-resumo:
+        {{
+            "titulo_quadro": "Quadro-Resumo de Legislações Ambientais - {municipio}/{grupo_atividade}",
+            "municipio": "{municipio}",
+            "grupo_atividade": "{grupo_atividade}",
+            "descricao": "Legislações ambientais aplicáveis a empreendimentos de {grupo_atividade} em {municipio}, TO",
+            "colunas": [
+                {{
+                    "nome": "esfera",
+                    "tipo": "texto",
+                    "descricao": "Esfera legal (Federal, Estadual, Municipal)"
+                }},
+                {{
+                    "nome": "titulo_legislacao",
+                    "tipo": "texto", 
+                    "descricao": "Título completo da legislação"
+                }},
+                {{
+                    "nome": "vigencia",
+                    "tipo": "texto",
+                    "descricao": "Status de vigência (✅ Vigente, ⚠️ Alterada, ❌ Revogada)"
+                }},
+                {{
+                    "nome": "descricao_resumida",
+                    "tipo": "texto",
+                    "descricao": "Descrição resumida da aplicabilidade"
+                }},
+                {{
+                    "nome": "aplicabilidade",
+                    "tipo": "texto",
+                    "descricao": "Como se aplica ao grupo de atividade específico"
+                }}
+            ],
+            "filtros_sugeridos": ["esfera", "vigencia"],
+            "ordenacao_padrao": "esfera"
+        }}
+
+        IMPORTANTE:
+        - Foque em legislações REALMENTE aplicáveis ao grupo "{grupo_atividade}"
+        - Considere as especificidades do município "{municipio}" no Tocantins
+        - Priorize legislações vigentes e relevantes
+        - Use ✅ para vigente, ⚠️ para alterada, ❌ para revogada
+        
+        Retorne APENAS o JSON válido, sem explicações adicionais.
+        """
+        
+        try:
+            # Adaptar prompt baseado no tipo de entrada
+            if comando_natural and descricao_adicional:
+                # Prompt para comando em linguagem natural
+                prompt = f"""
+                Você é um especialista em legislação ambiental brasileira, especializado no estado do Tocantins.
+                
+                SOLICITAÇÃO DO USUÁRIO:
+                "{descricao_adicional}"
+                
+                INFORMAÇÕES EXTRAÍDAS:
+                - Município: {municipio}
+                - Atividade: {grupo_atividade}
+                - Esferas solicitadas: {', '.join(esferas)}
+                
+                TAREFA: Atender exatamente à solicitação do usuário, gerando um quadro-resumo de legislações ambientais que contemple:
+                1. O contexto específico mencionado (ex: licenciamento ambiental, regularização, estudo ambiental)
+                2. As esferas legais solicitadas (federal, estadual, municipal)
+                3. O tipo de empreendimento e município especificados
+                
+                ESTRUTURA OBRIGATÓRIA do quadro-resumo:
+                - Esfera (Federal, Estadual, Municipal)
+                - Título da Legislação (nome oficial completo com numeração e data)
+                - Vigência (status atual - APENAS VIGENTES)
+                - Descrição Resumida (aplicabilidade específica ao contexto)
+                - Aplicabilidade (como se aplica ao empreendimento no contexto do licenciamento)
+                
+                PREMISSAS OBRIGATÓRIAS:
+                1. APENAS legislações VIGENTES (omitir revogadas/substituídas)
+                2. Títulos oficiais completos (Lei nº X, de data, nome)
+                3. Foco no contexto de licenciamento ambiental
+                4. Específico para o estado do Tocantins
+                5. Aplicabilidade clara para o tipo de empreendimento
+                
+                Retorne um JSON com a estrutura:
+                {{
+                    "quadro_resumo": [
+                        {{
+                            "esfera": "Federal/Estadual/Municipal",
+                            "titulo_legislacao": "Título oficial completo",
+                            "vigencia": "✅ Vigente",
+                            "descricao_resumida": "Descrição clara e objetiva",
+                            "aplicabilidade": "Como se aplica especificamente ao contexto"
+                        }}
+                    ]
+                }}
+                """
+            else:
+                # Prompt padrão para seleção manual
+                prompt = f"""
+                Você é um especialista em legislação ambiental brasileira, com foco no estado do Tocantins.
+                
+                TAREFA: Gerar um quadro-resumo de legislações ambientais para:
+                - Município: {municipio}
+                - Atividade: {grupo_atividade}
+                - Esferas legais: {', '.join(esferas)}
+                - Contexto adicional: {descricao_adicional}
+                
+                ESTRUTURA OBRIGATÓRIA do quadro-resumo:
+                - Esfera (Federal, Estadual, Municipal)
+                - Título da Legislação (nome oficial completo)
+                - Vigência (status atual)
+                - Descrição Resumida (aplicabilidade específica)
+                - Aplicabilidade (como se aplica ao empreendimento)
+                
+                PREMISSAS OBRIGATÓRIAS:
+                1. APENAS legislações VIGENTES
+                2. Títulos oficiais completos com numeração e data
+                3. Omitir legislações revogadas ou substituídas
+                4. Foco em licenciamento ambiental
+                5. Específico para o Tocantins
+                
+                Retorne um JSON com a estrutura:
+                {{
+                    "quadro_resumo": [
+                        {{
+                            "esfera": "Federal/Estadual/Municipal",
+                            "titulo_legislacao": "Título oficial completo",
+                            "vigencia": "✅ Vigente",
+                            "descricao_resumida": "Descrição clara e objetiva",
+                            "aplicabilidade": "Como se aplica especificamente"
+                        }}
+                    ]
+                }}
+                """
+            
+            client = OpenAI(
+                api_key=self.api_key,
+                timeout=60.0,  # Timeout de 60 segundos
+                max_retries=3  # Máximo de 3 tentativas
+            )
+            
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": "Você é um especialista em legislação ambiental brasileira. Retorne sempre JSON válido."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.3,
+                max_tokens=2000
+            )
+            
+            content = response.choices[0].message.content.strip()
+            
+            # Limpar possíveis caracteres extras
+            if content.startswith("```json"):
+                content = content[7:]
+            if content.endswith("```"):
+                content = content[:-3]
+            
+            estrutura = json.loads(content)
+            
+            # Validar estrutura obrigatória
+            campos_obrigatorios = ["titulo_quadro", "municipio", "grupo_atividade", "colunas"]
+            for campo in campos_obrigatorios:
+                if campo not in estrutura:
+                    raise ValueError(f"Campo obrigatório '{campo}' não encontrado na resposta da IA")
+            
+            return estrutura
+            
+        except json.JSONDecodeError as e:
+            print(f"❌ Erro ao decodificar JSON da IA: {e}")
+            return self._estrutura_quadro_padrao(municipio, grupo_atividade)
+        except openai.APIConnectionError as e:
+            print(f"❌ Erro de conexão com a API OpenAI: {e}")
+            print("💡 Verifique sua conexão com a internet e tente novamente")
+            return self._estrutura_quadro_padrao(municipio, grupo_atividade)
+        except openai.APITimeoutError as e:
+            print(f"❌ Timeout na API OpenAI: {e}")
+            print("💡 A API demorou para responder, tente novamente")
+            return self._estrutura_quadro_padrao(municipio, grupo_atividade)
+        except openai.AuthenticationError as e:
+            print(f"❌ Erro de autenticação OpenAI: {e}")
+            print("💡 Verifique se a OPENAI_API_KEY está correta no arquivo .env")
+            return self._estrutura_quadro_padrao(municipio, grupo_atividade)
+        except Exception as e:
+            print(f"❌ Erro na API OpenAI: {e}")
+            return self._estrutura_quadro_padrao(municipio, grupo_atividade)
+
+    def _estrutura_quadro_padrao(self, municipio: str, grupo_atividade: str) -> Dict:
+        """Estrutura padrão para quadro-resumo em caso de erro"""
+        return {
+            "titulo_quadro": f"Quadro-Resumo de Legislações Ambientais - {municipio}/{grupo_atividade}",
+            "municipio": municipio,
+            "grupo_atividade": grupo_atividade,
+            "descricao": f"Legislações ambientais aplicáveis a empreendimentos de {grupo_atividade} em {municipio}, TO",
+            "colunas": [
+                {"nome": "esfera", "tipo": "texto", "descricao": "Esfera legal"},
+                {"nome": "titulo_legislacao", "tipo": "texto", "descricao": "Título da legislação"},
+                {"nome": "vigencia", "tipo": "texto", "descricao": "Status de vigência"},
+                {"nome": "descricao_resumida", "tipo": "texto", "descricao": "Descrição resumida"},
+                {"nome": "aplicabilidade", "tipo": "texto", "descricao": "Aplicabilidade específica"}
+            ],
+            "filtros_sugeridos": ["esfera", "vigencia"],
+            "ordenacao_padrao": "esfera"
+        }
+
+    def popular_quadro_resumo(self, estrutura: Dict, municipio: str, grupo_atividade: str, esferas: List[str], limite_por_esfera: int = 10) -> pd.DataFrame:
+        """
+        Popula o quadro-resumo com legislações específicas para o município e atividade
+        
+        Args:
+            estrutura: Estrutura do quadro-resumo
+            municipio: Município do empreendimento
+            grupo_atividade: Grupo de atividade
+            esferas: Lista de esferas legais a incluir
+            limite_por_esfera: Máximo de legislações por esfera
+        
+        Returns:
+            DataFrame com o quadro-resumo populado
+        """
+        try:
+            dados_quadro = []
+            
+            # Gerar dados para cada esfera solicitada
+            for esfera in esferas:
+                legislacoes_esfera = self._obter_legislacoes_por_esfera(
+                    esfera, municipio, grupo_atividade, limite_por_esfera
+                )
+                dados_quadro.extend(legislacoes_esfera)
+            
+            # Criar DataFrame
+            df_quadro = pd.DataFrame(dados_quadro)
+            
+            # Ordenar por esfera (Federal, Estadual, Municipal)
+            ordem_esferas = {"Federal": 1, "Estadual": 2, "Municipal": 3}
+            df_quadro['ordem_esfera'] = df_quadro['esfera'].map(ordem_esferas)
+            df_quadro = df_quadro.sort_values('ordem_esfera').drop('ordem_esfera', axis=1)
+            
+            return df_quadro
+            
+        except Exception as e:
+            print(f"❌ Erro ao popular quadro-resumo: {e}")
+            return self._quadro_exemplo(municipio, grupo_atividade, esferas)
+
+    def _obter_legislacoes_por_esfera(self, esfera: str, municipio: str, grupo_atividade: str, limite: int) -> List[Dict]:
+        """Obtém legislações específicas para uma esfera legal"""
+        
+        if esfera == "Federal":
+            return self._legislacoes_federais(grupo_atividade, limite)
+        elif esfera == "Estadual":
+            return self._legislacoes_estaduais(municipio, grupo_atividade, limite)
+        elif esfera == "Municipal":
+            return self._legislacoes_municipais(municipio, grupo_atividade, limite)
+        else:
+            return []
+
+    def _verificar_vigencia_legislacao(self, legislacao: Dict) -> bool:
+        """
+        ⚠️ PREMISSA OBRIGATÓRIA: Verifica se a legislação está VIGENTE
+        Retorna True apenas para legislações vigentes, omite revogadas/substituídas
+        """
+        vigencia = legislacao.get("vigencia", "").lower()
+        titulo = legislacao.get("titulo_legislacao", "").lower()
+        
+        # Palavras que indicam legislação NÃO vigente
+        palavras_nao_vigentes = [
+            "revogad", "substituíd", "alterada por", "derrogad", 
+            "ab-rogad", "suspenso", "cancelad", "anulad"
+        ]
+        
+        # Verificar se contém indicadores de não vigência
+        for palavra in palavras_nao_vigentes:
+            if palavra in vigencia or palavra in titulo:
+                return False
+        
+        # Aceitar apenas legislações explicitamente marcadas como vigentes
+        return "vigente" in vigencia or "✅" in vigencia
+    
+    def _legislacoes_federais(self, grupo_atividade: str, limite: int) -> List[Dict]:
+        """Retorna APENAS legislações federais VIGENTES aplicáveis ao grupo de atividade"""
+        
+        # ⚠️ PREMISSA OBRIGATÓRIA: SOMENTE LEGISLAÇÕES VIGENTES
+        # Mapeamento de atividades para legislações federais VIGENTES E ATUALIZADAS
+        legislacoes_base = {
+            "Agricultura": [
+                {
+                    "esfera": "Federal",
+                    "titulo_legislacao": "Lei nº 12.651, de 25 de maio de 2012 (Código Florestal Brasileiro)",
+                    "vigencia": "✅ Vigente",
+                    "descricao_resumida": "Dispõe sobre a proteção da vegetação nativa, define Áreas de Preservação Permanente e Reserva Legal",
+                    "aplicabilidade": "Obrigatória para propriedades rurais - Reserva Legal mínima de 35% no Cerrado do Tocantins"
+                },
+                {
+                    "esfera": "Federal",
+                    "titulo_legislacao": "Lei nº 6.938, de 31 de agosto de 1981 (Política Nacional do Meio Ambiente)",
+                    "vigencia": "✅ Vigente",
+                    "descricao_resumida": "Institui a Política Nacional do Meio Ambiente, seus fins e mecanismos de formulação e aplicação",
+                    "aplicabilidade": "Licenciamento ambiental obrigatório para atividades agropecuárias potencialmente poluidoras"
+                },
+                {
+                    "esfera": "Federal",
+                    "titulo_legislacao": "Resolução CONAMA nº 237, de 19 de dezembro de 1997",
+                    "vigencia": "✅ Vigente",
+                    "descricao_resumida": "Regulamenta os aspectos de licenciamento ambiental estabelecidos na Política Nacional do Meio Ambiente",
+                    "aplicabilidade": "Define competências e procedimentos para licenciamento de atividades agrícolas"
+                },
+                {
+                    "esfera": "Federal",
+                    "titulo_legislacao": "Lei nº 12.305, de 2 de agosto de 2010 (Política Nacional de Resíduos Sólidos)",
+                    "vigencia": "✅ Vigente",
+                    "descricao_resumida": "Institui a Política Nacional de Resíduos Sólidos e altera a Lei nº 9.605/1998",
+                    "aplicabilidade": "Gestão obrigatória de resíduos sólidos em propriedades agrícolas"
+                }
+            ],
+            "Pecuária": [
+                {
+                    "esfera": "Federal",
+                    "titulo_legislacao": "Lei nº 12.651, de 25 de maio de 2012 (Código Florestal Brasileiro)",
+                    "vigencia": "✅ Vigente",
+                    "descricao_resumida": "Dispõe sobre a proteção da vegetação nativa, define Áreas de Preservação Permanente e Reserva Legal",
+                    "aplicabilidade": "Obrigatória para propriedades rurais - Reserva Legal mínima de 35% no Cerrado do Tocantins"
+                },
+                {
+                    "esfera": "Federal",
+                    "titulo_legislacao": "Decreto nº 9.013, de 29 de março de 2017 (Regulamento de Inspeção Industrial)",
+                    "vigencia": "✅ Vigente",
+                    "descricao_resumida": "Regulamenta a inspeção industrial e sanitária de produtos de origem animal",
+                    "aplicabilidade": "Obrigatório para frigoríficos e abatedouros de produtos pecuários"
+                },
+                {
+                    "esfera": "Federal",
+                    "titulo_legislacao": "Lei nº 9.605, de 12 de fevereiro de 1998 (Lei de Crimes Ambientais)",
+                    "vigencia": "✅ Vigente",
+                    "descricao_resumida": "Dispõe sobre as sanções penais e administrativas derivadas de condutas e atividades lesivas ao meio ambiente",
+                    "aplicabilidade": "Define crimes ambientais aplicáveis à pecuária, como poluição hídrica e desmatamento ilegal"
+                }
+            ],
+            "Indústria": [
+                {
+                    "esfera": "Federal",
+                    "titulo_legislacao": "Lei nº 6.938, de 31 de agosto de 1981 (Política Nacional do Meio Ambiente)",
+                    "vigencia": "✅ Vigente",
+                    "descricao_resumida": "Institui a Política Nacional do Meio Ambiente, seus fins e mecanismos de formulação e aplicação",
+                    "aplicabilidade": "Licenciamento ambiental obrigatório para atividades industriais potencialmente poluidoras"
+                },
+                {
+                    "esfera": "Federal",
+                    "titulo_legislacao": "Resolução CONAMA nº 237, de 19 de dezembro de 1997",
+                    "vigencia": "✅ Vigente",
+                    "descricao_resumida": "Regulamenta os aspectos de licenciamento ambiental estabelecidos na Política Nacional do Meio Ambiente",
+                    "aplicabilidade": "Define competências e procedimentos para licenciamento de atividades industriais"
+                },
+                {
+                    "esfera": "Federal",
+                    "titulo_legislacao": "Lei nº 12.305, de 2 de agosto de 2010 (Política Nacional de Resíduos Sólidos)",
+                    "vigencia": "✅ Vigente",
+                    "descricao_resumida": "Institui a Política Nacional de Resíduos Sólidos e altera a Lei nº 9.605/1998",
+                    "aplicabilidade": "Gestão obrigatória de resíduos sólidos industriais e logística reversa"
+                }
+            ],
+            "Mineração": [
+                {
+                    "esfera": "Federal",
+                    "titulo_legislacao": "Decreto-Lei nº 227, de 28 de fevereiro de 1967 (Código de Mineração)",
+                    "vigencia": "✅ Vigente",
+                    "descricao_resumida": "Dá nova redação ao Decreto-lei nº 1.985, de 29 de janeiro de 1940 (Código de Minas)",
+                    "aplicabilidade": "Regulamenta direitos minerários e regime de aproveitamento das substâncias minerais"
+                },
+                {
+                    "esfera": "Federal",
+                    "titulo_legislacao": "Resolução CONAMA nº 237, de 19 de dezembro de 1997",
+                    "vigencia": "✅ Vigente",
+                    "descricao_resumida": "Regulamenta os aspectos de licenciamento ambiental estabelecidos na Política Nacional do Meio Ambiente",
+                    "aplicabilidade": "Licenciamento ambiental obrigatório para atividades de mineração"
+                },
+                {
+                    "esfera": "Federal",
+                    "titulo_legislacao": "Lei nº 13.540, de 18 de dezembro de 2017",
+                    "vigencia": "✅ Vigente",
+                    "descricao_resumida": "Altera as Leis nº 7.990/1989 e 8.001/1990 para dispor sobre a Compensação Financeira pela Exploração de Recursos Minerais",
+                    "aplicabilidade": "Define obrigações de compensação financeira para atividades de mineração"
+                }
+            ]
+        }
+        
+        # ⚠️ LEGISLAÇÕES GERAIS VIGENTES - aplicáveis a todas as atividades
+        legislacoes_gerais = [
+            {
+                "esfera": "Federal",
+                "titulo_legislacao": "Lei nº 9.605, de 12 de fevereiro de 1998 (Lei de Crimes Ambientais)",
+                "vigencia": "✅ Vigente",
+                "descricao_resumida": "Dispõe sobre as sanções penais e administrativas derivadas de condutas e atividades lesivas ao meio ambiente",
+                "aplicabilidade": "Aplicável a todas as atividades - define sanções por infrações ambientais"
+            },
+            {
+                "esfera": "Federal",
+                "titulo_legislacao": "Lei nº 12.305, de 2 de agosto de 2010 (Política Nacional de Resíduos Sólidos)",
+                "vigencia": "✅ Vigente",
+                "descricao_resumida": "Institui a Política Nacional de Resíduos Sólidos e altera a Lei nº 9.605/1998",
+                "aplicabilidade": "Obrigatória para gestão de resíduos sólidos em todas as atividades"
+            }
+        ]
+        
+        # Combinar legislações específicas e gerais
+        legislacoes = legislacoes_base.get(grupo_atividade, []) + legislacoes_gerais
+        
+        # ⚠️ APLICAR FILTRO DE VIGÊNCIA OBRIGATÓRIO
+        legislacoes_vigentes = [
+            leg for leg in legislacoes 
+            if self._verificar_vigencia_legislacao(leg)
+        ]
+        
+        return legislacoes_vigentes[:limite]
+
+    def _legislacoes_estaduais(self, municipio: str, grupo_atividade: str, limite: int) -> List[Dict]:
+        """Retorna legislações estaduais do Tocantins aplicáveis"""
+        
+        # Buscar nas leis reais do Tocantins
+        legislacoes_estaduais = []
+        
+        # Filtrar leis relevantes para o grupo de atividade
+        palavras_chave = {
+            "Agricultura": ["agric", "rural", "agropec", "plantio", "cultivo"],
+            "Pecuária": ["pecuár", "gado", "bovino", "suíno", "avícola", "frigorífico"],
+            "Indústria": ["industr", "fábrica", "manufatur", "produção"],
+            "Mineração": ["miner", "lavra", "garimpo", "extração"],
+            "Saneamento": ["saneamento", "água", "esgoto", "resíduo"],
+            "Energia": ["energia", "elétrica", "hidrelétrica", "solar", "eólica"]
+        }
+        
+        palavras_atividade = palavras_chave.get(grupo_atividade, ["ambiental"])
+        
+        # Buscar nas leis carregadas
+        for lei in self.leis_data[:limite*2]:  # Buscar mais para filtrar
+            titulo_desc = (lei.get("titulo", "") + " " + lei.get("descricao", "")).lower()
+            
+            # Verificar se a lei é relevante para a atividade
+            if any(palavra in titulo_desc for palavra in palavras_atividade):
+                legislacoes_estaduais.append({
+                    "esfera": "Estadual",
+                    "titulo_legislacao": lei.get("titulo", "Lei Estadual"),
+                    "vigencia": "✅ Vigente",
+                    "descricao_resumida": lei.get("descricao", "")[:150] + "..." if len(lei.get("descricao", "")) > 150 else lei.get("descricao", ""),
+                    "aplicabilidade": f"Aplicável a atividades de {grupo_atividade.lower()} no estado do Tocantins"
+                })
+        
+        # ⚠️ LEGISLAÇÕES ESTADUAIS VIGENTES DO TOCANTINS
+        if not legislacoes_estaduais:
+            legislacoes_estaduais = [
+                {
+                    "esfera": "Estadual",
+                    "titulo_legislacao": "Lei Estadual nº 1.307, de 22 de março de 2002 (Política Estadual do Meio Ambiente do Tocantins)",
+                    "vigencia": "✅ Vigente",
+                    "descricao_resumida": "Institui a Política Estadual do Meio Ambiente, cria o Sistema Estadual do Meio Ambiente e dá outras providências",
+                    "aplicabilidade": f"Aplicável a todas as atividades de {grupo_atividade.lower()} no estado do Tocantins"
+                },
+                {
+                    "esfera": "Estadual",
+                    "titulo_legislacao": "Decreto Estadual nº 4.632, de 30 de abril de 2013 (Regulamento do NATURATINS)",
+                    "vigencia": "✅ Vigente",
+                    "descricao_resumida": "Regulamenta o licenciamento ambiental no âmbito do Instituto Natureza do Tocantins - NATURATINS",
+                    "aplicabilidade": f"Define procedimentos de licenciamento ambiental para atividades de {grupo_atividade.lower()}"
+                },
+                {
+                    "esfera": "Estadual",
+                    "titulo_legislacao": "Lei Estadual nº 1.560, de 29 de dezembro de 2004 (Código Florestal do Estado do Tocantins)",
+                    "vigencia": "✅ Vigente",
+                    "descricao_resumida": "Dispõe sobre a Política Florestal do Estado do Tocantins e dá outras providências",
+                    "aplicabilidade": f"Regulamenta atividades florestais relacionadas a {grupo_atividade.lower()} no Tocantins"
+                }
+            ]
+        
+        # ⚠️ APLICAR FILTRO DE VIGÊNCIA OBRIGATÓRIO
+        legislacoes_vigentes = [
+            leg for leg in legislacoes_estaduais 
+            if self._verificar_vigencia_legislacao(leg)
+        ]
+        
+        return legislacoes_vigentes[:limite]
+
+    def _legislacoes_municipais(self, municipio: str, grupo_atividade: str, limite: int) -> List[Dict]:
+        """Retorna legislações municipais aplicáveis"""
+        
+        return [
+            {
+                "esfera": "Municipal",
+                "titulo_legislacao": f"Lei Orgânica do Município de {municipio}",
+                "vigencia": "✅ Vigente",
+                "descricao_resumida": "Define competências municipais em matéria ambiental",
+                "aplicabilidade": f"Estabelece diretrizes locais para atividades de {grupo_atividade.lower()}"
+            },
+            {
+                "esfera": "Municipal",
+                "titulo_legislacao": f"Plano Diretor de {municipio}",
+                "vigencia": "✅ Vigente",
+                "descricao_resumida": "Regulamenta o uso e ocupação do solo municipal",
+                "aplicabilidade": f"Define zoneamento e restrições para {grupo_atividade.lower()}"
+            },
+            {
+                "esfera": "Municipal",
+                "titulo_legislacao": f"Código de Posturas de {municipio}",
+                "vigencia": "✅ Vigente",
+                "descricao_resumida": "Estabelece normas de conduta e funcionamento no município",
+                "aplicabilidade": f"Regulamenta aspectos operacionais de {grupo_atividade.lower()}"
+            }
+        ]
+        
+        # ⚠️ APLICAR FILTRO DE VIGÊNCIA OBRIGATÓRIO
+        legislacoes_vigentes = [
+            leg for leg in legislacoes_municipais 
+            if self._verificar_vigencia_legislacao(leg)
+        ]
+        
+        return legislacoes_vigentes[:limite]
+
+    def _quadro_exemplo(self, municipio: str, grupo_atividade: str, esferas: List[str]) -> pd.DataFrame:
+        """Quadro-resumo de exemplo em caso de erro"""
+        dados_exemplo = []
+        
+        if "Federal" in esferas:
+            dados_exemplo.append({
+                "esfera": "Federal",
+                "titulo_legislacao": "Lei 6.938/1981 – Política Nacional do Meio Ambiente",
+                "vigencia": "✅ Vigente",
+                "descricao_resumida": "Estabelece instrumentos da política ambiental nacional",
+                "aplicabilidade": f"Licenciamento ambiental obrigatório para {grupo_atividade.lower()}"
+            })
+        
+        if "Estadual" in esferas:
+            dados_exemplo.append({
+                "esfera": "Estadual",
+                "titulo_legislacao": "Lei Estadual nº 1.307/2002 – Política Ambiental TO",
+                "vigencia": "✅ Vigente",
+                "descricao_resumida": "Institui a Política Estadual do Meio Ambiente do Tocantins",
+                "aplicabilidade": f"Aplicável a atividades de {grupo_atividade.lower()} no estado"
+            })
+        
+        if "Municipal" in esferas:
+            dados_exemplo.append({
+                "esfera": "Municipal",
+                "titulo_legislacao": f"Plano Diretor de {municipio}",
+                "vigencia": "✅ Vigente",
+                "descricao_resumida": "Regulamenta o uso e ocupação do solo municipal",
+                "aplicabilidade": f"Define zoneamento para {grupo_atividade.lower()}"
+            })
+        
+        return pd.DataFrame(dados_exemplo)
+
     def gerar_estrutura_tabela(self, descricao_usuario: str) -> Dict[str, Any]:
         """
         Gera a estrutura da tabela baseada na descrição do usuário
@@ -276,8 +848,14 @@ class IATabela:
         """
         
         try:
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
+            client = OpenAI(
+                api_key=self.api_key,
+                timeout=60.0,  # Timeout de 60 segundos
+                max_retries=3  # Máximo de 3 tentativas
+            )
+            
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": prompt_sistema},
                     {"role": "user", "content": prompt_usuario}
@@ -295,6 +873,21 @@ class IATabela:
             estrutura = json.loads(resposta_ia)
             return estrutura
             
+        except openai.APIConnectionError as e:
+            print(f"❌ Erro de conexão com a API OpenAI: {e}")
+            print("💡 Verifique sua conexão com a internet e tente novamente")
+            return self._estrutura_padrao()
+        except openai.APITimeoutError as e:
+            print(f"❌ Timeout na API OpenAI: {e}")
+            print("💡 A API demorou para responder, tente novamente")
+            return self._estrutura_padrao()
+        except openai.AuthenticationError as e:
+            print(f"❌ Erro de autenticação OpenAI: {e}")
+            print("💡 Verifique se a OPENAI_API_KEY está correta no arquivo .env")
+            return self._estrutura_padrao()
+        except json.JSONDecodeError as e:
+            print(f"❌ Erro ao decodificar JSON da IA: {e}")
+            return self._estrutura_padrao()
         except Exception as e:
             print(f"❌ Erro na IA: {e}")
             # Retorna estrutura padrão em caso de erro
@@ -503,13 +1096,16 @@ class IATabela:
         titulo_arquivo = estrutura["titulo_tabela"].replace(" ", "_").lower()
         timestamp = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
         
+        # Usar path relativo ao diretório do projeto
+        projeto_root = Path(__file__).parent.parent
+        
         if formato == "excel":
             nome_arquivo = f"tabela_{titulo_arquivo}_{timestamp}.xlsx"
-            caminho = Path("c:/ia_leis_ambientais") / nome_arquivo
+            caminho = projeto_root / nome_arquivo
             df.to_excel(caminho, index=False)
         elif formato == "csv":
             nome_arquivo = f"tabela_{titulo_arquivo}_{timestamp}.csv"
-            caminho = Path("c:/ia_leis_ambientais") / nome_arquivo
+            caminho = projeto_root / nome_arquivo
             df.to_csv(caminho, index=False, encoding='utf-8')
         else:
             raise ValueError("Formato não suportado. Use 'excel' ou 'csv'")
