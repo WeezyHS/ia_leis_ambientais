@@ -254,7 +254,8 @@ class InterfaceTabela:
         print("\n📁 TABELAS SALVAS")
         print("-" * 40)
         
-        diretorio = Path("c:/ia_leis_ambientais")
+        # Usar path relativo ao diretório do projeto
+        diretorio = Path(__file__).parent.parent
         tabelas_excel = list(diretorio.glob("tabela_*.xlsx"))
         tabelas_csv = list(diretorio.glob("tabela_*.csv"))
         relatorios = list(diretorio.glob("tabela_*_relatorio.md"))
