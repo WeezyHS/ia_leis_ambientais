@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🤖 IA - Leis Ambientais do Tocantins</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            color: #2d3748;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .header-nav {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: #667eea;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .nav-link:hover {
+            background: rgba(102, 126, 234, 0.1);
+            color: #5a67d8;
+        }
+
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            max-width: 1400px; /* Expandido para notebooks */
+            margin: 0 auto;
+            width: 100%;
+            padding: 0 2rem; /* Mais padding lateral */
+        }
+
+        /* Adaptação específica para telas de notebook */
+        @media (min-width: 1024px) and (max-width: 1600px) {
+            .chat-container {
+                max-width: 90%; /* Usa 90% da largura em notebooks */
+                padding: 0 3rem;
+            }
+        }
+
+        /* Para telas muito grandes (desktops) */
+        @media (min-width: 1600px) {
+            .chat-container {
+                max-width: 1200px; /* Limita em telas muito grandes */
+            }
+        }
+
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            overflow-anchor: none;
+            scroll-behavior: smooth;
+            padding: 1.5rem 1rem; /* Reduzido padding lateral para mais espaço */
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem; /* Mais espaço entre mensagens */
+            /* Força altura mínima para garantir scroll em telas grandes */
+            min-height: 0;
+            /* Garante que o scroll funcione corretamente */
+            scrollbar-width: thin;
+        }
+
+        /* Padding específico para notebooks */
+        @media (min-width: 1024px) {
+            .messages-container {
+                padding: 2rem 1.5rem;
+                gap: 1.5rem;
+            }
+        }
+
+        /* Força o scroll automático para o final */
+        .messages-container::after {
+            content: '';
+            overflow-anchor: auto;
+            height: 1px;
+            /* Força elemento no final para scroll */
+            flex-shrink: 0;
+        }
+
+        /* Melhoria específica para telas grandes */
+        @media (min-width: 1200px) {
+            .messages-container {
+                /* Força comportamento de scroll mais agressivo */
+                overflow-y: scroll !important;
+                scroll-behavior: auto;
+            }
+            
+            .chat-container {
+                /* Garante altura fixa em telas grandes */
+                height: calc(100vh - 120px);
+            }
+        }
+
+        .message {
+            display: flex;
+            gap: 0.75rem;
+            max-width: 100%;
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message.assistant {
+            justify-content: flex-start;
+        }
+
+        .message-content {
+            background: white;
+            padding: 1rem 1.25rem;
+            border-radius: 1rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            max-width: 85%; /* Expandido para aproveitar mais espaço */
+            word-wrap: break-word;
+            line-height: 1.6; /* Melhor legibilidade */
+        }
+
+        /* Largura específica para notebooks - mais espaço para conteúdo */
+        @media (min-width: 1024px) {
+            .message-content {
+                max-width: 75%; /* Mais espaço em telas maiores */
+                padding: 1.25rem 1.5rem; /* Padding maior para conforto */
+            }
+        }
+
+        /* Para telas muito grandes */
+        @media (min-width: 1400px) {
+            .message-content {
+                max-width: 70%; /* Evita linhas muito longas */
+            }
+        }
+
+        .message.user .message-content {
+            background: #667eea;
+            color: white;
+        }
+
+        .message.assistant .message-content {
+            background: white;
+            color: #2d3748;
+        }
+
+        .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+
+        .user .avatar {
+            background: #4299e1;
+            color: white;
+        }
+
+        .assistant .avatar {
+            background: #48bb78;
+            color: white;
+        }
+
+        .input-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1.5rem 1rem; /* Reduzido para consistência */
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        /* Input container para notebooks */
+        @media (min-width: 1024px) {
+            .input-container {
+                padding: 2rem 1.5rem; /* Mais espaço em notebooks */
+            }
+        }
+
+        .input-form {
+            display: flex;
+            gap: 0.75rem;
+            align-items: flex-end;
+        }
+
+        .input-wrapper {
+            flex: 1;
+            position: relative;
+        }
+
+        #messageInput {
+            width: 100%;
+            min-height: 44px;
+            max-height: 120px;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 0.75rem;
+            font-size: 1rem;
+            font-family: inherit;
+            resize: none;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        #messageInput:focus {
+            border-color: #667eea;
+        }
+
+        #sendButton {
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 0.75rem;
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            min-width: 80px;
+        }
+
+        #sendButton:hover:not(:disabled) {
+            background: #5a67d8;
+        }
+
+        #sendButton:disabled {
+            background: #a0aec0;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #718096;
+            font-style: italic;
+        }
+
+        .loading-dots {
+            display: inline-flex;
+            gap: 2px;
+        }
+
+        .loading-dot {
+            width: 4px;
+            height: 4px;
+            background: #718096;
+            border-radius: 50%;
+            animation: loading 1.4s infinite ease-in-out;
+        }
+
+        .loading-dot:nth-child(1) { animation-delay: -0.32s; }
+        .loading-dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes loading {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+
+        .welcome-message {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.9);
+            padding: 2rem;
+            margin-top: 2rem;
+        }
+
+        .welcome-message h2 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .welcome-message p {
+            font-size: 1rem;
+            opacity: 0.8;
+        }
+
+        /* Scrollbar completamente oculta - sem hover */
+        .messages-container {
+            /* Para navegadores WebKit (Chrome, Safari, Edge) */
+            scrollbar-width: none !important; /* Firefox */
+            -ms-overflow-style: none !important; /* Internet Explorer 10+ */
+        }
+
+        .messages-container::-webkit-scrollbar {
+            display: none !important; /* WebKit */
+            width: 0 !important;
+            background: transparent !important;
+        }
+
+        /* Remove qualquer scrollbar em hover também */
+        .messages-container:hover {
+            scrollbar-width: none !important;
+        }
+
+        .messages-container:hover::-webkit-scrollbar {
+            display: none !important;
+            width: 0 !important;
+        }
+
+        /* Garante que nunca apareça scrollbar em nenhum estado */
+        .messages-container::-webkit-scrollbar-track,
+        .messages-container::-webkit-scrollbar-thumb,
+        .messages-container:hover::-webkit-scrollbar-track,
+        .messages-container:hover::-webkit-scrollbar-thumb {
+            display: none !important;
+            width: 0 !important;
+            background: transparent !important;
+        }
+
+        /* Animação do cursor de digitação */
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        /* Responsivo */
+        @media (max-width: 768px) {
+            .header {
+                padding: 1rem;
+            }
+
+            .input-container {
+                padding: 1rem;
+            }
+
+            .message-content {
+                max-width: 90%;
+            }
+
+            .header h1 {
+                font-size: 1.25rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🤖 IA - Consulta de Leis Ambientais do Tocantins</h1>
+    </div>
+
+    <div class="chat-container">
+        <div class="messages-container" id="messagesContainer">
+            <div class="welcome-message">
+                <h2>Bem-vindo ao Assistente da Plêiade Ambiental! 🌿</h2>
+                <p>Faça perguntas sobre leis ambientais.</p>
+            </div>
+        </div>
+
+        <div class="input-container">
+            <form class="input-form" id="messageForm">
+                <div class="input-wrapper">
+                    <textarea 
+                        id="messageInput" 
+                        placeholder="Digite sua pergunta sobre leis ambientais..."
+                        rows="1"
+                    ></textarea>
+                </div>
+                <button type="submit" id="sendButton">Enviar</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const messagesContainer = document.getElementById('messagesContainer');
+        const messageForm = document.getElementById('messageForm');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+
+        // Auto-resize textarea
+        messageInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        });
+
+        // Submit on Enter (but not Shift+Enter)
+        messageInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                messageForm.dispatchEvent(new Event('submit'));
+            }
+        });
+
+        // Handle form submission
+        messageForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const message = messageInput.value.trim();
+            if (!message) return;
+
+            // Add user message
+            addMessage(message, 'user');
+            
+            // Clear input and disable form
+            messageInput.value = '';
+            messageInput.style.height = 'auto';
+            setLoading(true);
+
+            try {
+                // Send request to API
+                const response = await fetch('/consulta', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ pergunta: message })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Erro ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                
+                // Add assistant response with typewriter animation
+                addMessage(data.resposta || 'Não foi possível gerar uma resposta.', 'assistant', true);
+                
+            } catch (error) {
+                console.error('Erro:', error);
+                addMessage(`❌ Erro na requisição: ${error.message}`, 'assistant');
+            } finally {
+                setLoading(false);
+                messageInput.focus();
+            }
+        });
+
+        function addMessage(content, sender, animate = false) {
+            // Remove welcome message if it exists
+            const welcomeMessage = document.querySelector('.welcome-message');
+            if (welcomeMessage) {
+                welcomeMessage.remove();
+            }
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+            
+            const avatar = document.createElement('div');
+            avatar.className = 'avatar';
+            avatar.textContent = sender === 'user' ? '👤' : '🤖';
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            
+            if (sender === 'user') {
+                messageDiv.appendChild(contentDiv);
+                messageDiv.appendChild(avatar);
+            } else {
+                messageDiv.appendChild(avatar);
+                messageDiv.appendChild(contentDiv);
+            }
+            
+            messagesContainer.appendChild(messageDiv);
+            
+            // Garante scroll quando adiciona nova mensagem (especialmente importante para primeira resposta)
+            const scrollFunc = ensureScrollSystem();
+            if (scrollFunc) {
+                scrollFunc();
+            } else {
+                // Fallback direto
+                setTimeout(() => {
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                }, 10);
+            }
+            
+            if (animate && sender === 'assistant') {
+                // Animação de digitação para respostas da IA
+                typewriterEffect(contentDiv, content);
+            } else {
+                // Exibição imediata para mensagens do usuário
+                const formattedContent = formatMessage(content);
+                contentDiv.innerHTML = formattedContent;
+            }
+        }
+        
+        // Sistema de scroll automático robusto
+        let autoScrollEnabled = true;
+        let scrollObserver = null;
+        let forceScrollFunction = null;
+
+        function initAutoScroll() {
+            const messagesContainer = document.getElementById('messagesContainer');
+            if (!messagesContainer) return null;
+            
+            // Função de scroll forçado - versão agressiva para telas grandes
+            function forceScrollToBottom() {
+                if (!autoScrollEnabled) return;
+                
+                const container = messagesContainer;
+                
+                // Força scroll múltiplas vezes com diferentes métodos
+                function doScroll() {
+                    const scrollHeight = container.scrollHeight;
+                    const clientHeight = container.clientHeight;
+                    const currentScrollTop = container.scrollTop;
+                    
+                    // Debug para telas grandes (apenas no console)
+                    if (window.innerWidth > 1200) {
+                        console.log('Scroll Debug:', {
+                            scrollHeight,
+                            clientHeight,
+                            currentScrollTop,
+                            needsScroll: scrollHeight > clientHeight,
+                            windowWidth: window.innerWidth
+                        });
+                    }
+                    
+                    // Método 1: scrollTop direto
+                    container.scrollTop = scrollHeight;
+                    
+                    // Método 2: scrollTo com smooth para telas grandes
+                    if (window.innerWidth > 1200) {
+                        container.scrollTo({
+                            top: scrollHeight,
+                            behavior: 'smooth'
+                        });
+                    } else {
+                        container.scrollTo({
+                            top: scrollHeight,
+                            behavior: 'auto'
+                        });
+                    }
+                    
+                    // Método 3: scrollIntoView no último elemento
+                    const lastMessage = container.lastElementChild;
+                    if (lastMessage && lastMessage.scrollIntoView) {
+                        lastMessage.scrollIntoView({ 
+                            behavior: window.innerWidth > 1200 ? 'smooth' : 'auto', 
+                            block: 'end',
+                            inline: 'nearest'
+                        });
+                    }
+                    
+                    // Método 4: Força scroll absoluto para telas grandes
+                    if (window.innerWidth > 1200) {
+                        container.style.scrollTop = scrollHeight + 'px';
+                    }
+                }
+                
+                // Executa imediatamente
+                doScroll();
+                
+                // Força com requestAnimationFrame
+                requestAnimationFrame(() => {
+                    doScroll();
+                });
+                
+                // Força novamente com setTimeout para casos extremos
+                setTimeout(() => {
+                    doScroll();
+                }, 10);
+                
+                // Força uma última vez após um delay maior para telas grandes
+                setTimeout(() => {
+                    doScroll();
+                }, 50);
+                
+                // Para telas muito grandes, força mais uma vez
+                if (window.innerWidth > 1400) {
+                    setTimeout(() => {
+                        doScroll();
+                    }, 100);
+                }
+            }
+
+            // MutationObserver para detectar mudanças no DOM
+            if (window.MutationObserver) {
+                scrollObserver = new MutationObserver((mutations) => {
+                    let shouldScroll = false;
+                    
+                    mutations.forEach((mutation) => {
+                        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                            shouldScroll = true;
+                        }
+                        if (mutation.type === 'characterData' || 
+                            (mutation.type === 'attributes' && mutation.attributeName === 'innerHTML')) {
+                            shouldScroll = true;
+                        }
+                    });
+                    
+                    if (shouldScroll) {
+                        forceScrollToBottom();
+                    }
+                });
+
+                // Observa mudanças no container de mensagens
+                scrollObserver.observe(messagesContainer, {
+                    childList: true,
+                    subtree: true,
+                    characterData: true,
+                    attributes: true,
+                    attributeFilter: ['innerHTML']
+                });
+            }
+
+            // Scroll inicial
+            forceScrollToBottom();
+            
+            return forceScrollToBottom;
+        }
+
+        // Inicializa o scroll imediatamente se o DOM já estiver pronto
+        function ensureScrollSystem() {
+            if (!forceScrollFunction) {
+                forceScrollFunction = initAutoScroll();
+            }
+            return forceScrollFunction;
+        }
+
+        // Função de scroll simplificada para compatibilidade
+        function scrollToBottom() {
+            const messagesContainer = document.getElementById('messagesContainer');
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function typewriterEffect(element, text) {
+            // Calcula velocidade adaptativa baseada no tamanho do texto
+            const textLength = text.length;
+            let baseSpeed;
+            let useAcceleration = false;
+            
+            if (textLength <= 200) {
+                baseSpeed = 25; // Textos curtos: mais devagar para melhor experiência
+            } else if (textLength <= 500) {
+                baseSpeed = 15; // Textos médios: velocidade moderada
+            } else if (textLength <= 1000) {
+                baseSpeed = 8;  // Textos longos: mais rápido
+            } else if (textLength <= 2000) {
+                baseSpeed = 5;  // Textos muito longos: bem rápido
+                useAcceleration = true; // Ativa aceleração progressiva
+            } else {
+                baseSpeed = 3;  // Textos enormes: muito rápido
+                useAcceleration = true; // Ativa aceleração progressiva
+            }
+            
+            let index = 0;
+            element.innerHTML = '';
+            
+            // Adiciona cursor piscando
+            const cursor = document.createElement('span');
+            cursor.innerHTML = '|';
+            cursor.style.animation = 'blink 1s infinite';
+            cursor.style.opacity = '0.7';
+            element.appendChild(cursor);
+            
+
+            
+            // Controle de frequência do scroll para melhor performance
+            
+            function typeNextChar() {
+                if (index < text.length) {
+                    // Remove cursor temporariamente
+                    if (cursor.parentNode) {
+                        element.removeChild(cursor);
+                    }
+                    
+                    // Adiciona próximo caractere e aplica formatação
+                    const currentText = text.substring(0, index + 1);
+                    element.innerHTML = formatMessage(currentText);
+                    
+                    // Adiciona cursor de volta
+                    element.appendChild(cursor);
+                    
+                    index++;
+                    
+                    // Garante scroll durante a digitação (fallback para primeira resposta)
+                    const scrollFunc = ensureScrollSystem();
+                    if (scrollFunc) {
+                        scrollFunc();
+                    } else {
+                        // Fallback direto se o sistema não estiver pronto
+                        const container = document.getElementById('messagesContainer');
+                        if (container) {
+                            container.scrollTop = container.scrollHeight;
+                        }
+                    }
+                    
+                    // Calcula velocidade dinâmica com aceleração progressiva
+                    let currentSpeed = baseSpeed;
+                    if (useAcceleration && textLength > 1000) {
+                        // Acelera progressivamente após 30% do texto
+                        const progress = index / textLength;
+                        if (progress > 0.3) {
+                            const accelerationFactor = Math.min(3, 1 + (progress - 0.3) * 4);
+                            currentSpeed = Math.max(1, Math.floor(baseSpeed / accelerationFactor));
+                        }
+                    }
+                    
+                    setTimeout(typeNextChar, currentSpeed);
+                } else {
+                    // Animação completa - remove cursor e aplica formatação final
+                    if (cursor.parentNode) {
+                        element.removeChild(cursor);
+                    }
+                    element.innerHTML = formatMessage(text);
+                    
+                    // Animação completa - o MutationObserver cuidará do scroll
+                }
+            }
+            
+            // Inicia a animação
+            typeNextChar();
+        }
+
+        function formatMessage(content) {
+            // Escape HTML first to prevent issues
+            let formatted = content
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+            
+            // Apply markdown formatting
+            formatted = formatted
+                // Bold text (**text**)
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                // Italic text (*text*)
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                // Line breaks
+                .replace(/\n/g, '<br>')
+                // Emojis with larger size
+                .replace(/(📊|🏛️|📄|📅|📋|🔧|💾|🤖|📐|🔍|⚙️|🔄|📈|🌿|❌|✅|⚡|🎯|🚀|📏)/g, '<span style="font-size: 1.1em;">$1</span>')
+                // Headers (### text)
+                .replace(/^### (.*$)/gm, '<h3 style="margin: 10px 0 5px 0; color: #2c3e50; font-size: 1.1em;">$1</h3>')
+                // Headers (## text)
+                .replace(/^## (.*$)/gm, '<h2 style="margin: 15px 0 8px 0; color: #2c3e50; font-size: 1.2em;">$1</h2>')
+                // Headers (# text)
+                .replace(/^# (.*$)/gm, '<h1 style="margin: 20px 0 10px 0; color: #2c3e50; font-size: 1.3em;">$1</h1>')
+                // Lists (- item or * item)
+                .replace(/^[\-\*] (.+$)/gm, '<li style="margin: 2px 0;">$1</li>')
+                // Numbered lists (1. item)
+                .replace(/^\d+\. (.+$)/gm, '<li style="margin: 2px 0;">$1</li>');
+            
+            // Wrap consecutive <li> elements in <ul>
+            formatted = formatted.replace(/(<li[^>]*>.*?<\/li>(?:\s*<li[^>]*>.*?<\/li>)*)/gs, '<ul style="margin: 5px 0; padding-left: 20px;">$1</ul>');
+            
+            return formatted;
+        }
+
+        function setLoading(loading) {
+            sendButton.disabled = loading;
+            messageInput.disabled = loading;
+            
+            if (loading) {
+                sendButton.innerHTML = '<div class="loading-dots"><div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div></div>';
+            } else {
+                sendButton.textContent = 'Enviar';
+            }
+        }
+
+        // Tenta inicializar o scroll imediatamente
+        function tryInitScroll() {
+            if (document.getElementById('messagesContainer')) {
+                forceScrollFunction = initAutoScroll();
+                window.forceScrollToBottom = forceScrollFunction;
+                return true;
+            }
+            return false;
+        }
+
+        // Tenta inicializar imediatamente
+        tryInitScroll();
+
+        // Inicialização quando a página carrega
+        document.addEventListener('DOMContentLoaded', function() {
+            const messageInput = document.getElementById('messageInput');
+            const sendButton = document.getElementById('sendButton');
+            const form = document.getElementById('messageForm');
+
+            // Garante que o sistema de scroll esteja inicializado
+            if (!tryInitScroll()) {
+                // Se ainda não conseguiu, tenta novamente após um pequeno delay
+                setTimeout(tryInitScroll, 100);
+            }
+
+            // Auto-resize do textarea
+            messageInput.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+            });
+
+            // Envio com Enter (Shift+Enter para nova linha)
+            messageInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (!sendButton.disabled && this.value.trim()) {
+                        sendMessage();
+                    }
+                }
+            });
+
+            // Envio do formulário
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                if (!sendButton.disabled && messageInput.value.trim()) {
+                    sendMessage();
+                }
+            });
+
+            // Focus input on load
+            messageInput.focus();
+        });
+    </script>
+</body>
+</html>
