@@ -97,7 +97,7 @@ class IATabela:
             return self._dados_exemplo_todas_fontes()
     
     def _carregar_dados_pinecone(self) -> List[Dict]:
-        """Carrega dados dos namespaces do Pinecone"""
+        """Carrega dados dos namespaces do Pinecone e arquivos JSON locais"""
         dados_pinecone = []
         
         try:
@@ -121,58 +121,125 @@ class IATabela:
                         "data_indexacao": "2025-01-07"
                     })
             
-            # COEMA (se existir namespace)
-            if "coema" in stats.namespaces:
-                coema_count = stats.namespaces["coema"].vector_count
-                for i in range(min(coema_count, 10)):  # Amostra de 10
-                    dados_pinecone.append({
+        except Exception as e:
+            print(f"⚠️ Erro ao acessar Pinecone: {e}")
+        
+        # Carregar dados completos do COEMA dos arquivos JSON locais
+        dados_coema = self._carregar_dados_coema_completos()
+        dados_pinecone.extend(dados_coema)
+        
+        # Adicionar dados de exemplo das outras fontes
+        dados_pinecone.extend([
+            {
+                "fonte": "CONAMA",
+                "tipo": "Resolução",
+                "titulo": "Resoluções CONAMA",
+                "descricao": "Resoluções do Conselho Nacional do Meio Ambiente",
+                "conteudo": "Diretrizes nacionais para política ambiental",
+                "categoria": "Conselho Nacional",
+                "jurisdicao": "Federal",
+                "data_indexacao": "2025-01-07"
+            },
+            {
+                "fonte": "IBAMA",
+                "tipo": "Instrução Normativa",
+                "titulo": "Instruções Normativas IBAMA",
+                "descricao": "Normas do Instituto Brasileiro do Meio Ambiente",
+                "conteudo": "Regulamentações para fiscalização e licenciamento",
+                "categoria": "Órgão Ambiental",
+                "jurisdicao": "Federal",
+                "data_indexacao": "2025-01-07"
+            },
+            {
+                "fonte": "ICMBio",
+                "tipo": "Portaria",
+                "titulo": "Portarias ICMBio",
+                "descricao": "Portarias do Instituto Chico Mendes",
+                "conteudo": "Gestão de unidades de conservação",
+                "categoria": "Conservação",
+                "jurisdicao": "Federal",
+                "data_indexacao": "2025-01-07"
+            }
+        ])
+        
+        return dados_pinecone
+    
+    def _carregar_dados_coema_completos(self) -> List[Dict]:
+        """Carrega os dados completos do COEMA dos arquivos JSON (186 documentos)"""
+        dados_coema = []
+        
+        try:
+            # Usar path relativo ao diretório do projeto
+            projeto_root = Path(__file__).parent.parent
+            arquivo_coema = projeto_root / "coema_data.json"
+            
+            if arquivo_coema.exists():
+                with open(arquivo_coema, 'r', encoding='utf-8') as f:
+                    documentos_coema = json.load(f)
+                
+                print(f"✅ Carregados {len(documentos_coema)} documentos do COEMA")
+                
+                # Converter documentos do COEMA para o formato da tabela
+                for doc in documentos_coema:
+                    dados_coema.append({
+                        "fonte": doc.get('conselho', 'COEMA'),
+                        "tipo": self._mapear_tipo_documento(doc.get('type', 'documento')),
+                        "titulo": doc.get('title', 'Documento sem título'),
+                        "descricao": self._extrair_descricao(doc.get('text', '')),
+                        "conteudo": doc.get('text', ''),
+                        "categoria": "Conselho Ambiental",
+                        "jurisdicao": "Estadual - Tocantins",
+                        "url": doc.get('url', ''),
+                        "data_coleta": doc.get('collected_at', '2025-01-08'),
+                        "data_indexacao": "2025-01-08"
+                    })
+            else:
+                print("⚠️ Arquivo coema_data.json não encontrado. Usando dados de exemplo.")
+                # Dados de exemplo se o arquivo não existir
+                dados_coema = [
+                    {
                         "fonte": "COEMA",
-                        "tipo": "Ato Normativo",
-                        "titulo": f"Documento COEMA {i+1}",
+                        "tipo": "Ata",
+                        "titulo": "Boletim do Desmatamento",
                         "descricao": "Documento do Conselho Estadual de Meio Ambiente",
                         "conteudo": "Regulamentação e diretrizes ambientais estaduais",
                         "categoria": "Conselho Ambiental",
                         "jurisdicao": "Estadual - Tocantins",
-                        "data_indexacao": "2025-01-07"
-                    })
-            
+                        "data_indexacao": "2025-01-08"
+                    }
+                ]
+                
         except Exception as e:
-            print(f"⚠️ Erro ao acessar Pinecone: {e}")
-            # Adicionar dados de exemplo das outras fontes
-            dados_pinecone.extend([
-                {
-                    "fonte": "CONAMA",
-                    "tipo": "Resolução",
-                    "titulo": "Resoluções CONAMA",
-                    "descricao": "Resoluções do Conselho Nacional do Meio Ambiente",
-                    "conteudo": "Diretrizes nacionais para política ambiental",
-                    "categoria": "Conselho Nacional",
-                    "jurisdicao": "Federal",
-                    "data_indexacao": "2025-01-07"
-                },
-                {
-                    "fonte": "IBAMA",
-                    "tipo": "Instrução Normativa",
-                    "titulo": "Instruções Normativas IBAMA",
-                    "descricao": "Normas do Instituto Brasileiro do Meio Ambiente",
-                    "conteudo": "Regulamentações para fiscalização e licenciamento",
-                    "categoria": "Órgão Ambiental",
-                    "jurisdicao": "Federal",
-                    "data_indexacao": "2025-01-07"
-                },
-                {
-                    "fonte": "ICMBio",
-                    "tipo": "Portaria",
-                    "titulo": "Portarias ICMBio",
-                    "descricao": "Portarias do Instituto Chico Mendes",
-                    "conteudo": "Gestão de unidades de conservação",
-                    "categoria": "Conservação",
-                    "jurisdicao": "Federal",
-                    "data_indexacao": "2025-01-07"
-                }
-            ])
+            print(f"❌ Erro ao carregar dados do COEMA: {e}")
+            dados_coema = []
         
-        return dados_pinecone
+        return dados_coema
+    
+    def _mapear_tipo_documento(self, tipo_original: str) -> str:
+        """Mapeia tipos de documentos para nomes mais legíveis"""
+        mapeamento = {
+            'ata': 'Ata',
+            'lei': 'Lei',
+            'portaria': 'Portaria',
+            'documento': 'Documento',
+            'regimento': 'Regimento',
+            'resolucao': 'Resolução',
+            'decreto': 'Decreto',
+            'pagina_web': 'Página Web'
+        }
+        return mapeamento.get(tipo_original.lower(), tipo_original.title())
+    
+    def _extrair_descricao(self, texto: str) -> str:
+        """Extrai uma descrição resumida do texto do documento"""
+        if not texto:
+            return "Documento sem descrição"
+        
+        # Pegar as primeiras 200 caracteres e adicionar reticências se necessário
+        descricao = texto.strip()[:200]
+        if len(texto) > 200:
+            descricao += "..."
+        
+        return descricao
     
     def _dados_exemplo_todas_fontes(self) -> List[Dict]:
         """Dados de exemplo de todas as fontes"""

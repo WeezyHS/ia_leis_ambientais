@@ -140,6 +140,42 @@ class COEMAService:
         
         return chunks
     
+    def process_coema_documents(self, documents: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Processa uma lista de documentos do COEMA"""
+        processed_docs = []
+        
+        for doc in documents:
+            try:
+                # Adapta o formato dos dados coletados para o formato esperado
+                processed_doc = {
+                    'title': doc.get('title', ''),
+                    'content': doc.get('text', ''),  # 'text' é o campo dos dados coletados
+                    'metadata': {
+                        'source': 'COEMA',
+                        'type': doc.get('type', 'documento'),
+                        'url': doc.get('url', ''),
+                        'title': doc.get('title', ''),
+                        'conselho': doc.get('conselho', 'COEMA'),
+                        'collected_at': doc.get('collected_at', ''),
+                        'content_length': len(doc.get('text', '')),
+                        'conteudo': doc.get('text', '')  # Campo esperado pelo indexador
+                    }
+                }
+                
+                # Extrai números de leis/resoluções se houver
+                text_content = doc.get('text', '') + " " + doc.get('title', '')
+                law_numbers = self.extract_law_numbers(text_content)
+                if law_numbers:
+                    processed_doc['metadata']['law_numbers'] = law_numbers
+                
+                processed_docs.append(processed_doc)
+                
+            except Exception as e:
+                print(f"Erro ao processar documento: {e}")
+                continue
+        
+        return processed_docs
+    
     def index_coema_documents(self, documents_path: str = None) -> dict:
         """Indexa documentos do COEMA no Pinecone"""
         try:

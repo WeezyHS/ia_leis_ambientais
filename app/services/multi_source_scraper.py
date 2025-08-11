@@ -298,6 +298,294 @@ class CONAMAScraper(BaseScraper):
         """Documentos do CONAMA são sempre relevantes"""
         return len(text) > 10  # Qualquer conteúdo mínimo
 
+class COEMAScraper(BaseScraper):
+    """Scraper para dados do COEMA e CERH do Tocantins"""
+    
+    def __init__(self):
+        super().__init__("COEMA/CERH", "https://www.to.gov.br/semarh")
+        self.visited_urls = set()
+        
+    def extract_documents(self) -> List[Dict]:
+        """Extrai documentos do COEMA e CERH navegando por múltiplas seções"""
+        documents = []
+        
+        # URLs principais para explorar
+        main_urls = [
+            "https://www.to.gov.br/semarh/conselhos/34qnn4fkmozg",
+            "https://www.to.gov.br/semarh/legislacao",
+            "https://www.to.gov.br/semarh/portarias",
+            "https://www.to.gov.br/semarh/resolucoes-e-outros-atos",
+            "https://www.to.gov.br/semarh/leis",
+            "https://www.to.gov.br/semarh/decretos",
+            "https://www.to.gov.br/semarh/consultas-publicas",
+            "https://www.to.gov.br/semarh/editais",
+            "https://www.to.gov.br/semarh/recursos-hidricos",
+            "https://www.to.gov.br/semarh/meio-ambiente",
+            "https://www.to.gov.br/semarh/unidades-colegiadas"
+        ]
+        
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+        
+        for url in main_urls:
+            try:
+                print(f"Explorando: {url}")
+                docs_from_url = self._extract_from_url(url, headers)
+                documents.extend(docs_from_url)
+                print(f"Coletados {len(docs_from_url)} documentos de {url}")
+                
+                # Pequena pausa entre requisições
+                time.sleep(1)
+                
+            except Exception as e:
+                print(f"Erro ao processar {url}: {e}")
+                continue
+        
+        # Buscar por mais URLs relacionadas
+        additional_docs = self._search_additional_pages(headers)
+        documents.extend(additional_docs)
+        
+        print(f"Total de documentos coletados: {len(documents)}")
+        return documents
+    
+    def _extract_from_url(self, url: str, headers: dict) -> List[Dict]:
+        """Extrai documentos de uma URL específica"""
+        documents = []
+        
+        if url in self.visited_urls:
+            return documents
+            
+        self.visited_urls.add(url)
+        
+        try:
+            response = requests.get(url, headers=headers, timeout=15)
+            response.raise_for_status()
+            
+            soup = BeautifulSoup(response.content, 'html.parser')
+            
+            # 1. Buscar links diretos para documentos
+            for link in soup.find_all('a', href=True):
+                href = link['href']
+                link_text = link.get_text(strip=True)
+                
+                if not link_text or len(link_text) < 3:
+                    continue
+                
+                # Construir URL completa
+                if href.startswith('http'):
+                    full_url = href
+                elif href.startswith('/'):
+                    full_url = "https://www.to.gov.br" + href
+                else:
+                    full_url = requests.compat.urljoin(url, href)
+                
+                # Verificar se é documento relevante
+                if self._is_document_link(href, link_text):
+                    doc = self._process_document_link(full_url, link_text, headers)
+                    if doc:
+                        documents.append(doc)
+                
+                # Verificar se é página com mais conteúdo para explorar
+                elif self._is_relevant_page_link(href, link_text):
+                    if full_url not in self.visited_urls and len(self.visited_urls) < 50:  # Limite para evitar loop infinito
+                        sub_docs = self._extract_from_url(full_url, headers)
+                        documents.extend(sub_docs)
+            
+            # 2. Extrair conteúdo da própria página se relevante
+            page_content = soup.get_text(separator='\n', strip=True)
+            if self.is_relevant_document(page_content) and len(page_content) > 200:
+                title = self._extract_page_title(soup, url)
+                documents.append({
+                    'source': self.name,
+                    'url': url,
+                    'text': page_content,
+                    'title': title,
+                    'type': self._identify_document_type(title, page_content),
+                    'collected_at': datetime.now().isoformat(),
+                    'conselho': self._identify_council(page_content, title)
+                })
+                
+        except Exception as e:
+            print(f"Erro ao extrair de {url}: {e}")
+            
+        return documents
+    
+    def _is_document_link(self, href: str, link_text: str) -> bool:
+        """Verifica se o link aponta para um documento"""
+        href_lower = href.lower()
+        text_lower = link_text.lower()
+        
+        # Extensões de arquivo
+        if any(ext in href_lower for ext in ['.pdf', '.doc', '.docx', '.xls', '.xlsx']):
+            return True
+            
+        # Palavras-chave no texto do link
+        keywords = [
+            'resolução', 'resolucao', 'portaria', 'deliberação', 'deliberacao',
+            'ata', 'regimento', 'lei', 'decreto', 'normativa', 'instrução',
+            'instrucao', 'circular', 'parecer', 'relatório', 'relatorio'
+        ]
+        
+        return any(keyword in text_lower for keyword in keywords)
+    
+    def _is_relevant_page_link(self, href: str, link_text: str) -> bool:
+        """Verifica se o link aponta para uma página relevante para explorar"""
+        href_lower = href.lower()
+        text_lower = link_text.lower()
+        
+        # Evitar links externos ou irrelevantes
+        if any(domain in href_lower for domain in ['facebook', 'twitter', 'instagram', 'youtube', 'mailto:', 'tel:']):
+            return False
+            
+        # Páginas relevantes
+        relevant_terms = [
+            'coema', 'cerh', 'conselho', 'legislacao', 'portaria', 'resolucao',
+            'meio-ambiente', 'recursos-hidricos', 'ambiental', 'hidrico',
+            'deliberacao', 'ata', 'regimento', 'normativa'
+        ]
+        
+        return any(term in href_lower or term in text_lower for term in relevant_terms)
+    
+    def _process_document_link(self, url: str, title: str, headers: dict) -> Optional[Dict]:
+        """Processa um link de documento"""
+        try:
+            text = self._extract_document_text(url, url)
+            
+            if text and self.is_relevant_document(text):
+                return {
+                    'source': self.name,
+                    'url': url,
+                    'text': text,
+                    'title': title,
+                    'type': self._identify_document_type(title, text),
+                    'collected_at': datetime.now().isoformat(),
+                    'conselho': self._identify_council(text, title)
+                }
+        except Exception as e:
+            print(f"Erro ao processar documento {url}: {e}")
+            
+        return None
+    
+    def _extract_page_title(self, soup: BeautifulSoup, url: str) -> str:
+        """Extrai o título da página"""
+        # Tentar diferentes elementos para o título
+        title_selectors = ['h1', 'h2', '.page-title', '.title', 'title']
+        
+        for selector in title_selectors:
+            element = soup.select_one(selector)
+            if element and element.get_text(strip=True):
+                return element.get_text(strip=True)
+        
+        # Fallback para URL
+        return url.split('/')[-1].replace('-', ' ').title()
+    
+    def _search_additional_pages(self, headers: dict) -> List[Dict]:
+        """Busca por páginas adicionais usando termos específicos"""
+        documents = []
+        
+        # Termos para buscar páginas específicas
+        search_terms = [
+            'coema-conselho-estadual-meio-ambiente',
+            'cerh-conselho-estadual-recursos-hidricos',
+            'resolucoes-coema',
+            'portarias-semarh',
+            'deliberacoes-cerh',
+            'atas-coema',
+            'regimento-interno'
+        ]
+        
+        for term in search_terms:
+            try:
+                search_url = f"https://www.to.gov.br/semarh/{term}"
+                if search_url not in self.visited_urls:
+                    docs = self._extract_from_url(search_url, headers)
+                    documents.extend(docs)
+                    time.sleep(1)
+            except Exception as e:
+                continue
+                
+        return documents
+        
+    def _extract_document_text(self, url: str, href: str) -> Optional[str]:
+        """Extrai texto de um documento"""
+        try:
+            if href.lower().endswith('.pdf'):
+                return self._extract_pdf_text(url)
+            else:
+                # Para outros tipos, tenta extrair como HTML
+                response = requests.get(url, timeout=10)
+                response.raise_for_status()
+                soup = BeautifulSoup(response.content, 'html.parser')
+                return soup.get_text(separator='\n', strip=True)
+        except Exception as e:
+            print(f"Erro ao extrair documento {url}: {e}")
+            return None
+            
+    def _extract_pdf_text(self, pdf_url: str) -> Optional[str]:
+        """Extrai texto de um PDF"""
+        try:
+            response = requests.get(pdf_url, timeout=20)
+            response.raise_for_status()
+            
+            pdf_file = io.BytesIO(response.content)
+            reader = pypdf.PdfReader(pdf_file)
+            
+            text = ""
+            for page in reader.pages:
+                text += page.extract_text() or ""
+                
+            return text
+        except Exception as e:
+            print(f"Erro ao extrair PDF {pdf_url}: {e}")
+            return None
+            
+    def _identify_document_type(self, title: str, text: str) -> str:
+        """Identifica o tipo de documento"""
+        title_lower = title.lower()
+        text_lower = text.lower()
+        
+        if any(word in title_lower for word in ['resolução', 'resolucao']):
+            return 'resolucao'
+        elif any(word in title_lower for word in ['portaria']):
+            return 'portaria'
+        elif any(word in title_lower for word in ['deliberação', 'deliberacao']):
+            return 'deliberacao'
+        elif any(word in title_lower for word in ['ata']):
+            return 'ata'
+        elif any(word in title_lower for word in ['regimento']):
+            return 'regimento'
+        elif any(word in title_lower for word in ['lei']):
+            return 'lei'
+        else:
+            return 'documento'
+            
+    def _identify_council(self, text: str, title: str) -> str:
+        """Identifica qual conselho (COEMA ou CERH)"""
+        combined_text = (text + " " + title).lower()
+        
+        if 'coema' in combined_text or 'meio ambiente' in combined_text:
+            return 'COEMA'
+        elif 'cerh' in combined_text or 'recursos hídricos' in combined_text or 'água' in combined_text:
+            return 'CERH'
+        else:
+            return 'SEMARH'
+            
+    def is_relevant_document(self, text: str) -> bool:
+        """Verifica se é documento relevante do COEMA/CERH"""
+        if len(text) < 50:  # Muito pouco conteúdo
+            return False
+            
+        keywords = [
+            "coema", "cerh", "meio ambiente", "recursos hídricos", "água",
+            "licenciamento", "ambiental", "conselho", "deliberação", "resolução",
+            "portaria", "semarh", "tocantins", "gestão ambiental", "poluição",
+            "conservação", "sustentabilidade", "biodiversidade", "fauna", "flora"
+        ]
+        
+        text_lower = text.lower()
+        return any(keyword in text_lower for keyword in keywords)
+
 class ABNTScraper(BaseScraper):
     """Scraper para normas da ABNT - apenas normas vigentes"""
     
@@ -521,6 +809,7 @@ class MultiSourceCollector:
             PlanaltoScraper(),
             IbamaScraper(),
             CONAMAScraper(),
+            COEMAScraper(),
             ABNTScraper(),
         ]
         

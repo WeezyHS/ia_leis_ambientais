@@ -1,0 +1,252 @@
+{
+  "timestamp": "2025-08-08T15:47:46.212949",
+  "stats_antes": {
+    "namespaces": {
+      "abnt-normas": {
+        "vector_count": 36
+      },
+      "": {
+        "vector_count": 271
+      }
+    },
+    "index_fullness": 0.0,
+    "total_vector_count": 307,
+    "dimension": 1536,
+    "metric": "cosine",
+    "vector_type": "dense"
+  },
+  "namespaces_processados": {
+    "abnt-normas": {
+      "documentos_analisados": 36,
+      "duplicatas_encontradas": 18,
+      "documentos_removidos": 18,
+      "erros_remocao": 0,
+      "relatorio_duplicatas": {
+        "total_documentos_analisados": 36,
+        "total_ids_para_remover": 18,
+        "duplicatas_por_texto": {
+          "8fac4fa5b64b146e03b316be4092b410": {
+            "mantido": "1682ff32-a0c4-4a41-b819-0e541e209305",
+            "removidos": [
+              "a9c0be13-0686-4e05-b17c-3417607fd4d2"
+            ],
+            "titulo": "Execution of a coating system for the interior and exterior of steel water piping Part 2:  Polyurethane",
+            "total_duplicatas": 2
+          },
+          "654a50ed9b023adf5408c33186c03133": {
+            "mantido": "9696097b-9cf2-4650-b1c7-8a76dc583b23",
+            "removidos": [
+              "cd0f5d5a-57e1-4c3b-aefb-5a6cdefb6759"
+            ],
+            "titulo": "Environmental performance evaluation - Green debt instrumentsPart 3: Taxonomy",
+            "total_duplicatas": 2
+          },
+          "e58692a3fed35654b62fae8f5996bf1c": {
+            "mantido": "3a0aa4b9-79ef-4271-af2a-0859c34d3fbf",
+            "removidos": [
+              "883eb708-bc89-4f5f-acad-5109ab3c3fa2"
+            ],
+            "titulo": "Water main and water distribution systems - PVC-U 6",
+            "total_duplicatas": 2
+          },
+          "b33f817823c19b528babfe9d19999863": {
+            "mantido": "951c63ba-867f-493e-a18d-1aec784eb294",
+            "removidos": [
+              "d3adf36d-39aa-41fe-a484-d4c581281f39"
+            ],
+            "titulo": "Calcium hypochlorite",
+            "total_duplicatas": 2
+          },
+          "81c8f203f43d3432f1bca750a1bfcab3": {
+            "mantido": "6a4c230e-5c3b-4f04-a2dd-e3f3195998e4",
+            "removidos": [
+              "c30de50c-0a66-4445-8e6a-c9b4aacb9b86"
+            ],
+            "titulo": "Soils - Compaction test",
+            "total_duplicatas": 2
+          },
+          "6520236b30e95d9bf995372408ac32a7": {
+            "mantido": "7e225f2e-2559-4e1b-b54e-6b163700ed00",
+            "removidos": [
+              "c4d5553a-d014-430e-9d14-4e293ce05183"
+            ],
+            "titulo": "Paints for buildings - Determination of water absorption for putty",
+            "total_duplicatas": 2
+          },
+          "5ec124ddf7983c65350269c556a863de": {
+            "mantido": "1ba65e54-fdb7-40ed-95dd-013c09e26ac0",
+            "removidos": [
+              "acc6b7bb-21e3-480e-95d4-83054b12717b"
+            ],
+            "titulo": "Environmental management - Life cycle assessment - Principles and framework",
+            "total_duplicatas": 2
+          },
+          "fb4b7e40799190916ff4ada09b7499e6": {
+            "mantido": "251efcf7-57c8-4cb0-8814-f333dc2d0772",
+            "removidos": [
+              "d9f46b98-ede5-4423-b1ea-dc5f44779487"
+            ],
+            "titulo": "",
+            "total_duplicatas": 2
+          },
+          "a54f88c65801cc8506ea6850bbc5807d": {
+            "mantido": "15ba173d-6aa9-4444-a285-0c74dc824c8e",
+            "removidos": [
+              "535eee49-d7a5-42da-9af1-22904c3fc796"
+            ],
+            "titulo": "Soils",
+            "total_duplicatas": 2
+          },
+          "d5aec43689da5700ef272d65cd4a521a": {
+            "mantido": "3911fa94-7357-489c-81bc-20a72f3d24cf",
+            "removidos": [
+              "9fb49282-11fa-4054-a687-a31cfb5299b2"
+            ],
+            "titulo": "Earth-moving machinery - Sustainability Part 3: Used machines",
+            "total_duplicatas": 2
+          },
+          "04803ededb8b1024f05157625b293218": {
+            "mantido": "b0e7df7f-f0a3-4ed4-b158-a4f886ff1673",
+            "removidos": [
+              "ec9db615-ec07-40b0-b19f-387b6a41263c"
+            ],
+            "titulo": "Earth-moving machinery - Sustainability Part 2: Remanufacturing",
+            "total_duplicatas": 2
+          },
+          "c7867c6d58046f562dd20a44cf588923": {
+            "mantido": "522bd9f3-4d01-485b-b850-8636c8f4ada3",
+            "removidos": [
+              "78e97ffc-08b3-4747-9da0-65ae85731472"
+            ],
+            "titulo": "Earth-moving machinery - Fire prevention guidance",
+            "total_duplicatas": 2
+          },
+          "bc6019d4e707963ad12800cb99922bd8": {
+            "mantido": "32db0add-b89f-4d08-b7f1-cc8d20ad84fd",
+            "removidos": [
+              "d9dee9e8-f58a-4ce0-94de-6f7670f26893"
+            ],
+            "titulo": "Soil",
+            "total_duplicatas": 2
+          },
+          "8ef09a387142e58f9207acdb88bfd1b6": {
+            "mantido": "051fb56e-a796-46ec-b49b-2dc3868f7c10",
+            "removidos": [
+              "ec7bd612-d4d1-4283-99dc-b3cedd762d17"
+            ],
+            "titulo": "Dangerous goods transportation - Wastes",
+            "total_duplicatas": 2
+          },
+          "24d436be86dce78d993545c3d73fefdf": {
+            "mantido": "2fe1607e-c36d-4bdf-8b01-27f24ab1f18a",
+            "removidos": [
+              "580c18fa-77f1-494c-af47-8f426c977b6f"
+            ],
+            "titulo": "Sustainability criteria for bioenergy",
+            "total_duplicatas": 2
+          },
+          "a1a214400b50494788ce5d39480f23db": {
+            "mantido": "e37e209c-fb8e-41ce-a40a-10b6dfc3f5ea",
+            "removidos": [
+              "fd7db912-7126-4367-991c-94df06e55cac"
+            ],
+            "titulo": "Animal health services waste management and of interest in animal health",
+            "total_duplicatas": 2
+          },
+          "529335bdcd1ea960afb3ba4cceeaaf67": {
+            "mantido": "10507982-cab4-44d8-acbe-1bf548b2d612",
+            "removidos": [
+              "8e13bc22-20c6-403f-bef2-7cdb2f8729ef"
+            ],
+            "titulo": "Waste classificationPart 2: General system of waste classification",
+            "total_duplicatas": 2
+          },
+          "211d4674736ad7faf42cd2b8dea6015c": {
+            "mantido": "646c5860-190b-487a-a098-1c539a90d74e",
+            "removidos": [
+              "6e2cb419-1b03-4d1e-8e5c-6d58404a0638"
+            ],
+            "titulo": "Waste classificationPart 1: Requirements for classification",
+            "total_duplicatas": 2
+          }
+        },
+        "duplicatas_por_identificador": {},
+        "ids_para_remover": [
+          "9fb49282-11fa-4054-a687-a31cfb5299b2",
+          "8e13bc22-20c6-403f-bef2-7cdb2f8729ef",
+          "a9c0be13-0686-4e05-b17c-3417607fd4d2",
+          "78e97ffc-08b3-4747-9da0-65ae85731472",
+          "d3adf36d-39aa-41fe-a484-d4c581281f39",
+          "acc6b7bb-21e3-480e-95d4-83054b12717b",
+          "883eb708-bc89-4f5f-acad-5109ab3c3fa2",
+          "580c18fa-77f1-494c-af47-8f426c977b6f",
+          "c4d5553a-d014-430e-9d14-4e293ce05183",
+          "cd0f5d5a-57e1-4c3b-aefb-5a6cdefb6759",
+          "fd7db912-7126-4367-991c-94df06e55cac",
+          "6e2cb419-1b03-4d1e-8e5c-6d58404a0638",
+          "ec7bd612-d4d1-4283-99dc-b3cedd762d17",
+          "ec9db615-ec07-40b0-b19f-387b6a41263c",
+          "d9f46b98-ede5-4423-b1ea-dc5f44779487",
+          "c30de50c-0a66-4445-8e6a-c9b4aacb9b86",
+          "d9dee9e8-f58a-4ce0-94de-6f7670f26893",
+          "535eee49-d7a5-42da-9af1-22904c3fc796"
+        ]
+      },
+      "resultado_remocao": {
+        "total_solicitados": 18,
+        "removidos_com_sucesso": 18,
+        "erros": 0,
+        "ids_removidos": [
+          "9fb49282-11fa-4054-a687-a31cfb5299b2",
+          "8e13bc22-20c6-403f-bef2-7cdb2f8729ef",
+          "a9c0be13-0686-4e05-b17c-3417607fd4d2",
+          "78e97ffc-08b3-4747-9da0-65ae85731472",
+          "d3adf36d-39aa-41fe-a484-d4c581281f39",
+          "acc6b7bb-21e3-480e-95d4-83054b12717b",
+          "883eb708-bc89-4f5f-acad-5109ab3c3fa2",
+          "580c18fa-77f1-494c-af47-8f426c977b6f",
+          "c4d5553a-d014-430e-9d14-4e293ce05183",
+          "cd0f5d5a-57e1-4c3b-aefb-5a6cdefb6759",
+          "fd7db912-7126-4367-991c-94df06e55cac",
+          "6e2cb419-1b03-4d1e-8e5c-6d58404a0638",
+          "ec7bd612-d4d1-4283-99dc-b3cedd762d17",
+          "ec9db615-ec07-40b0-b19f-387b6a41263c",
+          "d9f46b98-ede5-4423-b1ea-dc5f44779487",
+          "c30de50c-0a66-4445-8e6a-c9b4aacb9b86",
+          "d9dee9e8-f58a-4ce0-94de-6f7670f26893",
+          "535eee49-d7a5-42da-9af1-22904c3fc796"
+        ],
+        "detalhes_erros": []
+      }
+    },
+    "": {
+      "documentos_analisados": 100,
+      "duplicatas_encontradas": 0,
+      "documentos_removidos": 0,
+      "relatorio_duplicatas": {
+        "total_documentos_analisados": 100,
+        "total_ids_para_remover": 0,
+        "duplicatas_por_texto": {},
+        "duplicatas_por_identificador": {},
+        "ids_para_remover": []
+      }
+    }
+  },
+  "total_removidos": 18,
+  "total_erros": 0,
+  "stats_depois": {
+    "namespaces": {
+      "": {
+        "vector_count": 271
+      },
+      "abnt-normas": {
+        "vector_count": 36
+      }
+    },
+    "index_fullness": 0.0,
+    "total_vector_count": 307,
+    "dimension": 1536,
+    "metric": "cosine",
+    "vector_type": "dense"
+  }
+}
