@@ -1,0 +1,74 @@
+# Arquivos de ambiente com chaves secretas
+.env
+.env.local
+.env.production
+.env.staging
+
+# Arquivos Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+PYTHONPATH
+
+# Ambiente virtual
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+
+# Arquivos temporários
+*.tmp
+*.temp
+
+# Arquivos de sistema
+.DS_Store
+Thumbs.db
+
+# Arquivos de backup
+*.bak
+*.backup
+
+# Arquivos Excel temporários
+~$*.xlsx
+~$*.xls
+
+# Arquivos PDF grandes (manter apenas os essenciais)
+*.pdf
+!README*.pdf
+
+# Resultados de scraping temporários
+resultados/
+*.html
+
+# Arquivos JSON grandes de dados temporários
+*_results_*.json
+*_consolidated_*.json
