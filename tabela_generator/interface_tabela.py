@@ -150,7 +150,9 @@ class InterfaceTabela:
             print(f"📊 Incluindo dados de TODAS as fontes ({total_disponivel} documentos disponíveis)")
             limite_padrao = 20
         else:
-            total_disponivel = len(self.ia_tabela.leis_data)
+            # Filtrar apenas leis estaduais dos dados do Pinecone
+            dados_estaduais = [d for d in self.ia_tabela.todas_fontes_data if d.get('jurisdicao', '').startswith('Estadual')]
+            total_disponivel = len(dados_estaduais)
             print(f"🏛️ Incluindo apenas leis estaduais do TO ({total_disponivel} leis disponíveis)")
             limite_padrao = 10
         
@@ -202,15 +204,19 @@ class InterfaceTabela:
         print("\n🔍 DADOS DISPONÍVEIS")
         print("-" * 40)
         
-        total_leis = len(self.ia_tabela.leis_data)
-        total_todas_fontes = len(self.ia_tabela.todas_fontes_data)
+        # Todos os dados agora vêm do Pinecone
+        dados_pinecone = self.ia_tabela.todas_fontes_data
+        dados_estaduais = [d for d in dados_pinecone if d.get('jurisdicao', '').startswith('Estadual')]
+        total_leis = len(dados_estaduais)
+        total_todas_fontes = len(dados_pinecone)
         
         print(f"🏛️ Leis Estaduais do Tocantins: {total_leis}")
-        print(f"🌐 Total de TODAS as Fontes: {total_todas_fontes}")
+        print(f"🌐 Total de TODAS as Fontes (Pinecone): {total_todas_fontes}")
         
-        print("\n📚 FONTES DISPONÍVEIS:")
-        print("   🏛️ Legislação Estadual TO (271 leis)")
-        print("   📊 Power BI Dashboard (2.770 atos federais)")
+        print("\n📚 FONTES DISPONÍVEIS (todas do Pinecone):")
+        print("   🏛️ Legislação Estadual TO")
+        print("   🇧🇷 Legislação Federal")
+        print("   🏘️ Legislação Municipal")
         print("   🔧 ABNT (Normas técnicas)")
         print("   🌿 COEMA (Conselho Estadual)")
         print("   🇧🇷 CONAMA (Conselho Nacional)")
@@ -219,7 +225,7 @@ class InterfaceTabela:
         
         if total_leis > 0:
             print("\n📋 Exemplo de lei estadual:")
-            lei_exemplo = self.ia_tabela.leis_data[0]
+            lei_exemplo = dados_estaduais[0]
             
             for campo, valor in lei_exemplo.items():
                 valor_str = str(valor)[:100] + "..." if len(str(valor)) > 100 else str(valor)
