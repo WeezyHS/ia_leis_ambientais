@@ -35,69 +35,39 @@ class IATabela:
         
 
         
-        # Carregar dados de todas as fontes
-        self.leis_data = self._carregar_leis()
+        # Carregar dados APENAS do Pinecone
         self.todas_fontes_data = self._carregar_todas_fontes()
         
-    def _carregar_leis(self) -> List[Dict]:
-        """Carrega os dados das leis do arquivo JSON"""
-        try:
-            # Usar path relativo ao diretório do projeto
-            projeto_root = Path(__file__).parent.parent
-            arquivo_leis = projeto_root / "leis_ambientais_CORRETAS_20250807_004018.json"
-            if arquivo_leis.exists():
-                with open(arquivo_leis, 'r', encoding='utf-8') as f:
-                    return json.load(f)
-            else:
-                print("⚠️ Arquivo de leis não encontrado. Usando dados de exemplo.")
-                return self._dados_exemplo()
-        except Exception as e:
-            print(f"❌ Erro ao carregar leis: {e}")
-            return self._dados_exemplo()
+
+    
+
+    
+
+    
+
+    
+
     
     def _carregar_todas_fontes(self) -> List[Dict]:
-        """Carrega dados de TODAS as fontes disponíveis"""
+        """Carrega dados APENAS do Pinecone como fonte única"""
         todas_fontes = []
         
         try:
-            # 1. Leis Estaduais do Tocantins (271 leis)
-            for lei in self.leis_data:
-                todas_fontes.append({
-                    "fonte": "Legislação Estadual TO",
-                    "tipo": "Lei Estadual",
-                    "titulo": lei.get("titulo", ""),
-                    "descricao": lei.get("descricao", ""),
-                    "conteudo": lei.get("descricao", ""),
-                    "categoria": "Ambiental",
-                    "jurisdicao": "Estadual - Tocantins",
-                    "data_indexacao": "2025-01-07"
-                })
-            
-            # 2. Dados do Pinecone (ABNT, COEMA, etc.)
+            # ÚNICA FONTE: Dados do Pinecone
+            print("🎯 Carregando dados APENAS do Pinecone como fonte única...")
             dados_pinecone = self._carregar_dados_pinecone()
             todas_fontes.extend(dados_pinecone)
             
-            # 3. Power BI Dashboard (referência)
-            todas_fontes.append({
-                "fonte": "Power BI Dashboard",
-                "tipo": "Dashboard Federal",
-                "titulo": "Dashboard Federal de Atos Normativos Ambientais",
-                "descricao": "Compilação de 2.770 atos normativos federais desde 1937",
-                "conteudo": "Base de dados federal com leis, decretos, resoluções e portarias ambientais",
-                "categoria": "Compilação Federal",
-                "jurisdicao": "Federal",
-                "data_indexacao": "2025-01-07"
-            })
-            
-            print(f"✅ {len(todas_fontes)} documentos carregados de todas as fontes")
+            print(f"✅ {len(todas_fontes)} documentos carregados APENAS do Pinecone")
             return todas_fontes
             
         except Exception as e:
-            print(f"❌ Erro ao carregar todas as fontes: {e}")
-            return self._dados_exemplo_todas_fontes()
+            print(f"❌ Erro ao carregar dados do Pinecone: {e}")
+            # Retorna lista vazia em caso de erro
+            return []
     
     def _carregar_dados_pinecone(self) -> List[Dict]:
-        """Carrega dados dos namespaces do Pinecone e arquivos JSON locais"""
+        """Carrega apenas dados reais dos namespaces do Pinecone e arquivos JSON locais"""
         dados_pinecone = []
         
         try:
@@ -105,427 +75,127 @@ class IATabela:
             
             # Obter estatísticas dos namespaces
             stats = pinecone_index.describe_index_stats()
+            print(f"📊 Namespaces disponíveis no Pinecone: {list(stats.namespaces.keys())}")
             
-            # ABNT Normas
+            # Buscar dados reais de ABNT se disponível no namespace
             if "abnt-normas" in stats.namespaces:
                 abnt_count = stats.namespaces["abnt-normas"].vector_count
-                for i in range(min(abnt_count, 10)):  # Amostra de 10
-                    dados_pinecone.append({
-                        "fonte": "ABNT",
-                        "tipo": "Norma Técnica",
-                        "titulo": f"Norma ABNT {i+1}",
-                        "descricao": "Norma técnica brasileira para padrões ambientais",
-                        "conteudo": "Especificações técnicas para conformidade ambiental",
-                        "categoria": "Norma Técnica",
-                        "jurisdicao": "Nacional",
-                        "data_indexacao": "2025-01-07"
-                    })
+                print(f"📋 Encontradas {abnt_count} normas ABNT no Pinecone")
+                
+                # Buscar dados reais das normas ABNT (limitado para performance)
+                try:
+                    query_response = pinecone_index.query(
+                        namespace="abnt-normas",
+                        vector=[0.0] * 1536,  # Vector dummy para busca
+                        top_k=min(10, abnt_count),
+                        include_metadata=True
+                    )
+                    
+                    for match in query_response.matches:
+                        metadata = match.metadata or {}
+                        dados_pinecone.append({
+                            "fonte": "ABNT - Pinecone",
+                            "tipo": "Norma Técnica",
+                            "titulo": metadata.get("titulo", "Norma ABNT"),
+                            "descricao": metadata.get("descricao", "Norma técnica brasileira")[:200] + "...",
+                            "conteudo": metadata.get("conteudo", "Especificações técnicas")[:200] + "...",
+                            "categoria": "Norma Técnica",
+                            "jurisdicao": "Nacional",
+                            "data_indexacao": metadata.get("data_indexacao", "2025-01-07"),
+                            "fonte_dados": "Pinecone - Dados Reais"
+                        })
+                except Exception as e:
+                    print(f"⚠️ Erro ao buscar normas ABNT: {e}")
+            
+            # Buscar dados reais do namespace principal (onde estão as leis)
+            for namespace in stats.namespaces:
+                if namespace not in ["abnt-normas"] and stats.namespaces[namespace].vector_count > 0:
+                    print(f"📋 Namespace '{namespace}' com {stats.namespaces[namespace].vector_count} documentos")
+                    
+                    # Buscar documentos do namespace principal
+                    try:
+                        query_response = pinecone_index.query(
+                            namespace=namespace if namespace != "" else None,
+                            vector=[0.0] * 1536,  # Vector dummy para busca
+                            top_k=min(50, stats.namespaces[namespace].vector_count),  # Buscar mais documentos
+                            include_metadata=True
+                        )
+                        
+                        for match in query_response.matches:
+                            metadata = match.metadata or {}
+                            
+                            # Extrair dados do documento
+                            titulo = metadata.get("titulo", metadata.get("title", "Documento"))
+                            descricao = metadata.get("descricao", metadata.get("ementa", metadata.get("content", "")))
+                            tipo_doc = metadata.get("tipo", metadata.get("type", "Lei"))
+                            jurisdicao = metadata.get("jurisdicao", metadata.get("jurisdiction", "Federal"))
+                            
+                            dados_pinecone.append({
+                                "fonte": f"Pinecone - {namespace if namespace else 'Principal'}",
+                                "tipo": self._mapear_tipo_documento(tipo_doc),
+                                "titulo": titulo,
+                                "descricao": descricao[:300] + "..." if len(descricao) > 300 else descricao,
+                                "ementa": descricao,  # Para compatibilidade com leis federais
+                                "conteudo": metadata.get("conteudo", metadata.get("content", descricao))[:200] + "...",
+                                "categoria": "Legislação Ambiental",
+                                "jurisdicao": jurisdicao,
+                                "data_indexacao": metadata.get("data_indexacao", "2025-01-07"),
+                                "fonte_dados": "Pinecone - Dados Reais",
+                                "vigencia": "✅ Vigente"  # Assumir vigente para dados do Pinecone
+                            })
+                            
+                    except Exception as e:
+                        print(f"⚠️ Erro ao buscar dados do namespace '{namespace}': {e}")
             
         except Exception as e:
             print(f"⚠️ Erro ao acessar Pinecone: {e}")
         
-        # Carregar dados completos do COEMA dos arquivos JSON locais
-        dados_coema = self._carregar_dados_coema_completos()
-        dados_pinecone.extend(dados_coema)
-        
-        # Adicionar dados de exemplo das outras fontes
-        dados_pinecone.extend([
-            {
-                "fonte": "CONAMA",
-                "tipo": "Resolução",
-                "titulo": "Resoluções CONAMA",
-                "descricao": "Resoluções do Conselho Nacional do Meio Ambiente",
-                "conteudo": "Diretrizes nacionais para política ambiental",
-                "categoria": "Conselho Nacional",
-                "jurisdicao": "Federal",
-                "data_indexacao": "2025-01-07"
-            },
-            {
-                "fonte": "IBAMA",
-                "tipo": "Instrução Normativa",
-                "titulo": "Instruções Normativas IBAMA",
-                "descricao": "Normas do Instituto Brasileiro do Meio Ambiente",
-                "conteudo": "Regulamentações para fiscalização e licenciamento",
-                "categoria": "Órgão Ambiental",
-                "jurisdicao": "Federal",
-                "data_indexacao": "2025-01-07"
-            },
-            {
-                "fonte": "ICMBio",
-                "tipo": "Portaria",
-                "titulo": "Portarias ICMBio",
-                "descricao": "Portarias do Instituto Chico Mendes",
-                "conteudo": "Gestão de unidades de conservação",
-                "categoria": "Conservação",
-                "jurisdicao": "Federal",
-                "data_indexacao": "2025-01-07"
-            }
-        ])
+        # Nota: Todos os dados (incluindo COEMA, IBAMA, ICMBio) devem estar indexados no Pinecone
+        print(f"📊 Total de {len(dados_pinecone)} documentos carregados APENAS do Pinecone")
         
         return dados_pinecone
     
-    def _carregar_dados_coema_completos(self) -> List[Dict]:
-        """Carrega os dados completos do COEMA dos arquivos JSON (186 documentos)"""
-        dados_coema = []
+    def _mapear_tipo_documento(self, tipo_doc: str) -> str:
+        """Mapeia tipos de documento para categorias padronizadas"""
+        tipo_doc = tipo_doc.lower() if tipo_doc else ""
         
-        try:
-            # Usar path relativo ao diretório do projeto
-            projeto_root = Path(__file__).parent.parent
-            arquivo_coema = projeto_root / "coema_data.json"
-            
-            if arquivo_coema.exists():
-                with open(arquivo_coema, 'r', encoding='utf-8') as f:
-                    documentos_coema = json.load(f)
-                
-                print(f"✅ Carregados {len(documentos_coema)} documentos do COEMA")
-                
-                # Converter documentos do COEMA para o formato da tabela
-                for doc in documentos_coema:
-                    dados_coema.append({
-                        "fonte": doc.get('conselho', 'COEMA'),
-                        "tipo": self._mapear_tipo_documento(doc.get('type', 'documento')),
-                        "titulo": doc.get('title', 'Documento sem título'),
-                        "descricao": self._extrair_descricao(doc.get('text', '')),
-                        "conteudo": doc.get('text', ''),
-                        "categoria": "Conselho Ambiental",
-                        "jurisdicao": "Estadual - Tocantins",
-                        "url": doc.get('url', ''),
-                        "data_coleta": doc.get('collected_at', '2025-01-08'),
-                        "data_indexacao": "2025-01-08"
-                    })
-            else:
-                print("⚠️ Arquivo coema_data.json não encontrado. Usando dados de exemplo.")
-                # Dados de exemplo se o arquivo não existir
-                dados_coema = [
-                    {
-                        "fonte": "COEMA",
-                        "tipo": "Ata",
-                        "titulo": "Boletim do Desmatamento",
-                        "descricao": "Documento do Conselho Estadual de Meio Ambiente",
-                        "conteudo": "Regulamentação e diretrizes ambientais estaduais",
-                        "categoria": "Conselho Ambiental",
-                        "jurisdicao": "Estadual - Tocantins",
-                        "data_indexacao": "2025-01-08"
-                    }
-                ]
-                
-        except Exception as e:
-            print(f"❌ Erro ao carregar dados do COEMA: {e}")
-            dados_coema = []
-        
-        return dados_coema
-    
-    def _mapear_tipo_documento(self, tipo_original: str) -> str:
-        """Mapeia tipos de documentos para nomes mais legíveis"""
-        mapeamento = {
-            'ata': 'Ata',
-            'lei': 'Lei',
-            'portaria': 'Portaria',
-            'documento': 'Documento',
-            'regimento': 'Regimento',
-            'resolucao': 'Resolução',
-            'decreto': 'Decreto',
-            'pagina_web': 'Página Web'
-        }
-        return mapeamento.get(tipo_original.lower(), tipo_original.title())
-    
-    def _extrair_descricao(self, texto: str) -> str:
-        """Extrai uma descrição resumida do texto do documento"""
-        if not texto:
-            return "Documento sem descrição"
-        
-        # Pegar as primeiras 200 caracteres e adicionar reticências se necessário
-        descricao = texto.strip()[:200]
-        if len(texto) > 200:
-            descricao += "..."
-        
-        return descricao
-    
-    def _dados_exemplo_todas_fontes(self) -> List[Dict]:
-        """Dados de exemplo de todas as fontes"""
-        return [
-            {
-                "fonte": "Legislação Estadual TO",
-                "tipo": "Lei Estadual",
-                "titulo": "Lei nº 4795/2025 - Política Ambiental",
-                "descricao": "Institui política estadual de meio ambiente",
-                "conteudo": "Estabelece diretrizes para proteção ambiental",
-                "categoria": "Ambiental",
-                "jurisdicao": "Estadual - Tocantins",
-                "data_indexacao": "2025-01-07"
-            },
-            {
-                "fonte": "Power BI Dashboard",
-                "tipo": "Dashboard Federal",
-                "titulo": "Atos Normativos Federais",
-                "descricao": "2.770 atos normativos desde 1937",
-                "conteudo": "Compilação federal de legislação ambiental",
-                "categoria": "Compilação Federal",
-                "jurisdicao": "Federal",
-                "data_indexacao": "2025-01-07"
-            },
-            {
-                "fonte": "ABNT",
-                "tipo": "Norma Técnica",
-                "titulo": "Normas Técnicas Ambientais",
-                "descricao": "Padrões técnicos para conformidade",
-                "conteudo": "Especificações técnicas ambientais",
-                "categoria": "Norma Técnica",
-                "jurisdicao": "Nacional",
-                "data_indexacao": "2025-01-07"
-            }
-        ]
-    
-    def _dados_exemplo(self) -> List[Dict]:
-        """Retorna dados de exemplo para demonstração"""
-        return [
-            {
-                "titulo": "Lei nº 1.001/2023 - Política Estadual de Meio Ambiente",
-                "descricao": "Institui a Política Estadual de Meio Ambiente do Tocantins",
-                "data": "2023-03-15",
-                "link_arquivo": "http://exemplo.com/lei1001.pdf",
-                "conteudo_parcial": "Dispõe sobre a proteção ambiental..."
-            },
-            {
-                "titulo": "Lei nº 1.002/2023 - Fundo Estadual de Meio Ambiente",
-                "descricao": "Cria o Fundo Estadual de Meio Ambiente",
-                "data": "2023-04-20",
-                "link_arquivo": "http://exemplo.com/lei1002.pdf",
-                "conteudo_parcial": "Estabelece recursos para projetos ambientais..."
-            },
-            {
-                "titulo": "Lei nº 1.003/2024 - Licenciamento Ambiental",
-                "descricao": "Regulamenta o licenciamento ambiental no estado",
-                "data": "2024-01-10",
-                "link_arquivo": "http://exemplo.com/lei1003.pdf",
-                "conteudo_parcial": "Define procedimentos para licenciamento..."
-            }
-        ]
-    
-    def gerar_quadro_resumo_legislacoes(self, municipio: str, grupo_atividade: str, descricao_adicional: str = "", esferas: List[str] = None, comando_natural: bool = False) -> Dict:
-        """
-        Gera um quadro-resumo de legislações ambientais específico para município e atividade
-        
-        Args:
-            municipio: Nome do município do Tocantins
-            grupo_atividade: Grupo de atividade do empreendimento
-            descricao_adicional: Descrição adicional do empreendimento
-            esferas: Lista de esferas legais a incluir (Federal, Estadual, Municipal)
-        
-        Returns:
-            Dict com estrutura do quadro-resumo
-        """
-        if esferas is None:
-            esferas = ["Federal", "Estadual", "Municipal"]
-        
-        prompt = f"""
-        Você é um especialista em legislação ambiental brasileira. Crie um quadro-resumo de legislações ambientais vigentes para:
+        if "lei" in tipo_doc:
+            return "Lei"
+        elif "decreto" in tipo_doc:
+            return "Decreto"
+        elif "resolução" in tipo_doc or "resolucao" in tipo_doc:
+            return "Resolução"
+        elif "portaria" in tipo_doc:
+            return "Portaria"
+        elif "instrução" in tipo_doc or "instrucao" in tipo_doc:
+            return "Instrução Normativa"
+        elif "norma" in tipo_doc:
+            return "Norma"
+        elif "constituição" in tipo_doc or "constituicao" in tipo_doc:
+            return "Constituição"
+        else:
+            return "Legislação"
 
-        LOCALIZAÇÃO: {municipio}, Tocantins
-        ATIVIDADE: {grupo_atividade}
-        DETALHES: {descricao_adicional if descricao_adicional else "Não especificado"}
-        ESFERAS: {", ".join(esferas)}
-
-        FORMATO OBRIGATÓRIO do quadro-resumo:
-        {{
-            "titulo_quadro": "Quadro-Resumo de Legislações Ambientais - {municipio}/{grupo_atividade}",
-            "municipio": "{municipio}",
-            "grupo_atividade": "{grupo_atividade}",
-            "descricao": "Legislações ambientais aplicáveis a empreendimentos de {grupo_atividade} em {municipio}, TO",
-            "colunas": [
-                {{
-                    "nome": "esfera",
-                    "tipo": "texto",
-                    "descricao": "Esfera legal (Federal, Estadual, Municipal)"
-                }},
-                {{
-                    "nome": "titulo_legislacao",
-                    "tipo": "texto", 
-                    "descricao": "Título completo da legislação"
-                }},
-                {{
-                    "nome": "vigencia",
-                    "tipo": "texto",
-                    "descricao": "Status de vigência (✅ Vigente, ⚠️ Alterada, ❌ Revogada)"
-                }},
-                {{
-                    "nome": "descricao_resumida",
-                    "tipo": "texto",
-                    "descricao": "Descrição resumida da aplicabilidade"
-                }},
-                {{
-                    "nome": "aplicabilidade",
-                    "tipo": "texto",
-                    "descricao": "Como se aplica ao grupo de atividade específico"
-                }}
-            ],
-            "filtros_sugeridos": ["esfera", "vigencia"],
-            "ordenacao_padrao": "esfera"
-        }}
-
-        IMPORTANTE:
-        - Foque em legislações REALMENTE aplicáveis ao grupo "{grupo_atividade}"
-        - Considere as especificidades do município "{municipio}" no Tocantins
-        - Priorize legislações vigentes e relevantes
-        - Use ✅ para vigente, ⚠️ para alterada, ❌ para revogada
-        
-        Retorne APENAS o JSON válido, sem explicações adicionais.
-        """
-        
-        try:
-            # Adaptar prompt baseado no tipo de entrada
-            if comando_natural and descricao_adicional:
-                # Prompt para comando em linguagem natural
-                prompt = f"""
-                Você é um especialista em legislação ambiental brasileira, especializado no estado do Tocantins.
-                
-                SOLICITAÇÃO DO USUÁRIO:
-                "{descricao_adicional}"
-                
-                INFORMAÇÕES EXTRAÍDAS:
-                - Município: {municipio}
-                - Atividade: {grupo_atividade}
-                - Esferas solicitadas: {', '.join(esferas)}
-                
-                TAREFA: Atender exatamente à solicitação do usuário, gerando um quadro-resumo de legislações ambientais que contemple:
-                1. O contexto específico mencionado (ex: licenciamento ambiental, regularização, estudo ambiental)
-                2. As esferas legais solicitadas (federal, estadual, municipal)
-                3. O tipo de empreendimento e município especificados
-                
-                ESTRUTURA OBRIGATÓRIA do quadro-resumo:
-                - Esfera (Federal, Estadual, Municipal)
-                - Título da Legislação (nome oficial completo com numeração e data)
-                - Vigência (status atual - APENAS VIGENTES)
-                - Descrição Resumida (aplicabilidade específica ao contexto)
-                - Aplicabilidade (como se aplica ao empreendimento no contexto do licenciamento)
-                
-                PREMISSAS OBRIGATÓRIAS:
-                1. APENAS legislações VIGENTES (omitir revogadas/substituídas)
-                2. Títulos oficiais completos (Lei nº X, de data, nome)
-                3. Foco no contexto de licenciamento ambiental
-                4. Específico para o estado do Tocantins
-                5. Aplicabilidade clara para o tipo de empreendimento
-                
-                Retorne um JSON com a estrutura:
-                {{
-                    "quadro_resumo": [
-                        {{
-                            "esfera": "Federal/Estadual/Municipal",
-                            "titulo_legislacao": "Título oficial completo",
-                            "vigencia": "✅ Vigente",
-                            "descricao_resumida": "Descrição clara e objetiva",
-                            "aplicabilidade": "Como se aplica especificamente ao contexto"
-                        }}
-                    ]
-                }}
-                """
-            else:
-                # Prompt padrão para seleção manual
-                prompt = f"""
-                Você é um especialista em legislação ambiental brasileira, com foco no estado do Tocantins.
-                
-                TAREFA: Gerar um quadro-resumo de legislações ambientais para:
-                - Município: {municipio}
-                - Atividade: {grupo_atividade}
-                - Esferas legais: {', '.join(esferas)}
-                - Contexto adicional: {descricao_adicional}
-                
-                ESTRUTURA OBRIGATÓRIA do quadro-resumo:
-                - Esfera (Federal, Estadual, Municipal)
-                - Título da Legislação (nome oficial completo)
-                - Vigência (status atual)
-                - Descrição Resumida (aplicabilidade específica)
-                - Aplicabilidade (como se aplica ao empreendimento)
-                
-                PREMISSAS OBRIGATÓRIAS:
-                1. APENAS legislações VIGENTES
-                2. Títulos oficiais completos com numeração e data
-                3. Omitir legislações revogadas ou substituídas
-                4. Foco em licenciamento ambiental
-                5. Específico para o Tocantins
-                
-                Retorne um JSON com a estrutura:
-                {{
-                    "quadro_resumo": [
-                        {{
-                            "esfera": "Federal/Estadual/Municipal",
-                            "titulo_legislacao": "Título oficial completo",
-                            "vigencia": "✅ Vigente",
-                            "descricao_resumida": "Descrição clara e objetiva",
-                            "aplicabilidade": "Como se aplica especificamente"
-                        }}
-                    ]
-                }}
-                """
-            
-            client = OpenAI(
-                api_key=self.api_key,
-                timeout=60.0,  # Timeout de 60 segundos
-                max_retries=3  # Máximo de 3 tentativas
-            )
-            
-            response = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": "Você é um especialista em legislação ambiental brasileira. Retorne sempre JSON válido."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.3,
-                max_tokens=2000
-            )
-            
-            content = response.choices[0].message.content.strip()
-            
-            # Limpar possíveis caracteres extras
-            if content.startswith("```json"):
-                content = content[7:]
-            if content.endswith("```"):
-                content = content[:-3]
-            
-            estrutura = json.loads(content)
-            
-            # Validar estrutura obrigatória
-            campos_obrigatorios = ["titulo_quadro", "municipio", "grupo_atividade", "colunas"]
-            for campo in campos_obrigatorios:
-                if campo not in estrutura:
-                    raise ValueError(f"Campo obrigatório '{campo}' não encontrado na resposta da IA")
-            
-            return estrutura
-            
-        except json.JSONDecodeError as e:
-            print(f"❌ Erro ao decodificar JSON da IA: {e}")
-            return self._estrutura_quadro_padrao(municipio, grupo_atividade)
-        except openai.APIConnectionError as e:
-            print(f"❌ Erro de conexão com a API OpenAI: {e}")
-            print("💡 Verifique sua conexão com a internet e tente novamente")
-            return self._estrutura_quadro_padrao(municipio, grupo_atividade)
-        except openai.APITimeoutError as e:
-            print(f"❌ Timeout na API OpenAI: {e}")
-            print("💡 A API demorou para responder, tente novamente")
-            return self._estrutura_quadro_padrao(municipio, grupo_atividade)
-        except openai.AuthenticationError as e:
-            print(f"❌ Erro de autenticação OpenAI: {e}")
-            print("💡 Verifique se a OPENAI_API_KEY está correta no arquivo .env")
-            return self._estrutura_quadro_padrao(municipio, grupo_atividade)
-        except Exception as e:
-            print(f"❌ Erro na API OpenAI: {e}")
-            return self._estrutura_quadro_padrao(municipio, grupo_atividade)
-
-    def _estrutura_quadro_padrao(self, municipio: str, grupo_atividade: str) -> Dict:
-        """Estrutura padrão para quadro-resumo em caso de erro"""
+    def _estrutura_quadro_padrao(self, municipio: str, grupo_atividade: str) -> Dict[str, Any]:
+        """Retorna estrutura padrão para quadro-resumo de legislações"""
         return {
-            "titulo_quadro": f"Quadro-Resumo de Legislações Ambientais - {municipio}/{grupo_atividade}",
+            "titulo": f"Quadro-Resumo de Legislações Ambientais - {grupo_atividade} em {municipio}",
             "municipio": municipio,
             "grupo_atividade": grupo_atividade,
-            "descricao": f"Legislações ambientais aplicáveis a empreendimentos de {grupo_atividade} em {municipio}, TO",
+            "descricao": f"Legislações ambientais aplicáveis para atividades de {grupo_atividade} no município de {municipio}",
+            "dados": [],
             "colunas": [
-                {"nome": "esfera", "tipo": "texto", "descricao": "Esfera legal"},
-                {"nome": "titulo_legislacao", "tipo": "texto", "descricao": "Título da legislação"},
-                {"nome": "vigencia", "tipo": "texto", "descricao": "Status de vigência"},
-                {"nome": "descricao_resumida", "tipo": "texto", "descricao": "Descrição resumida"},
-                {"nome": "aplicabilidade", "tipo": "texto", "descricao": "Aplicabilidade específica"}
+                "esfera",
+                "titulo_legislacao", 
+                "vigencia",
+                "descricao_resumida",
+                "aplicabilidade",
+                "fonte_dados"
             ],
-            "filtros_sugeridos": ["esfera", "vigencia"],
+            "filtros_sugeridos": {
+                "esfera": ["Federal", "Estadual", "Municipal"],
+                "vigencia": ["Vigente", "Revogada", "Alterada"]
+            },
             "ordenacao_padrao": "esfera"
         }
 
@@ -556,16 +226,37 @@ class IATabela:
             # Criar DataFrame
             df_quadro = pd.DataFrame(dados_quadro)
             
-            # Ordenar por esfera (Federal, Estadual, Municipal)
-            ordem_esferas = {"Federal": 1, "Estadual": 2, "Municipal": 3}
-            df_quadro['ordem_esfera'] = df_quadro['esfera'].map(ordem_esferas)
-            df_quadro = df_quadro.sort_values('ordem_esfera').drop('ordem_esfera', axis=1)
+            # Ordenar por esfera (Federal, Estadual, Municipal) - com tratamento de erro
+            if not df_quadro.empty and 'esfera' in df_quadro.columns:
+                ordem_esferas = {"Federal": 1, "Estadual": 2, "Municipal": 3}
+                df_quadro['ordem_esfera'] = df_quadro['esfera'].map(ordem_esferas)
+                df_quadro = df_quadro.sort_values('ordem_esfera').drop('ordem_esfera', axis=1)
+            else:
+                print(f"⚠️ DataFrame vazio ou sem coluna 'esfera'. Colunas disponíveis: {list(df_quadro.columns) if not df_quadro.empty else 'Nenhuma'}")
+                # Se não há dados, criar um DataFrame com estrutura mínima
+                if df_quadro.empty:
+                    df_quadro = pd.DataFrame([{
+                        "esfera": "Sistema",
+                        "titulo_legislacao": "Nenhuma legislação encontrada",
+                        "vigencia": "N/A",
+                        "descricao_resumida": f"Nenhuma legislação específica para {grupo_atividade} foi encontrada nos dados indexados",
+                        "aplicabilidade": "Consulte legislação específica para sua atividade",
+                        "fonte_dados": "Sistema - Dados Não Encontrados"
+                    }])
             
             return df_quadro
             
         except Exception as e:
             print(f"❌ Erro ao popular quadro-resumo: {e}")
-            return self._quadro_exemplo(municipio, grupo_atividade, esferas)
+            # Retorna DataFrame vazio em caso de erro
+            return pd.DataFrame([{
+                "esfera": "Sistema",
+                "titulo_legislacao": "Erro no sistema",
+                "vigencia": "N/A",
+                "descricao_resumida": "Não foi possível carregar dados do Pinecone",
+                "aplicabilidade": "Sistema temporariamente indisponível",
+                "fonte_dados": "Erro - Dados Não Disponíveis"
+            }])
 
     def _obter_legislacoes_por_esfera(self, esfera: str, municipio: str, grupo_atividade: str, limite: int) -> List[Dict]:
         """Obtém legislações específicas para uma esfera legal"""
@@ -602,198 +293,134 @@ class IATabela:
         return "vigente" in vigencia or "✅" in vigencia
     
     def _legislacoes_federais(self, grupo_atividade: str, limite: int) -> List[Dict]:
-        """Retorna APENAS legislações federais VIGENTES aplicáveis ao grupo de atividade"""
+        """Retorna APENAS legislações federais REAIS do Pinecone relacionadas ao grupo de atividade"""
         
-        # ⚠️ PREMISSA OBRIGATÓRIA: SOMENTE LEGISLAÇÕES VIGENTES
-        # Mapeamento de atividades para legislações federais VIGENTES E ATUALIZADAS
-        legislacoes_base = {
-            "Agricultura": [
-                {
-                    "esfera": "Federal",
-                    "titulo_legislacao": "Lei nº 12.651, de 25 de maio de 2012 (Código Florestal Brasileiro)",
-                    "vigencia": "✅ Vigente",
-                    "descricao_resumida": "Dispõe sobre a proteção da vegetação nativa, define Áreas de Preservação Permanente e Reserva Legal",
-                    "aplicabilidade": "Obrigatória para propriedades rurais - Reserva Legal mínima de 35% no Cerrado do Tocantins"
-                },
-                {
-                    "esfera": "Federal",
-                    "titulo_legislacao": "Lei nº 6.938, de 31 de agosto de 1981 (Política Nacional do Meio Ambiente)",
-                    "vigencia": "✅ Vigente",
-                    "descricao_resumida": "Institui a Política Nacional do Meio Ambiente, seus fins e mecanismos de formulação e aplicação",
-                    "aplicabilidade": "Licenciamento ambiental obrigatório para atividades agropecuárias potencialmente poluidoras"
-                },
-                {
-                    "esfera": "Federal",
-                    "titulo_legislacao": "Resolução CONAMA nº 237, de 19 de dezembro de 1997",
-                    "vigencia": "✅ Vigente",
-                    "descricao_resumida": "Regulamenta os aspectos de licenciamento ambiental estabelecidos na Política Nacional do Meio Ambiente",
-                    "aplicabilidade": "Define competências e procedimentos para licenciamento de atividades agrícolas"
-                },
-                {
-                    "esfera": "Federal",
-                    "titulo_legislacao": "Lei nº 12.305, de 2 de agosto de 2010 (Política Nacional de Resíduos Sólidos)",
-                    "vigencia": "✅ Vigente",
-                    "descricao_resumida": "Institui a Política Nacional de Resíduos Sólidos e altera a Lei nº 9.605/1998",
-                    "aplicabilidade": "Gestão obrigatória de resíduos sólidos em propriedades agrícolas"
-                }
-            ],
-            "Pecuária": [
-                {
-                    "esfera": "Federal",
-                    "titulo_legislacao": "Lei nº 12.651, de 25 de maio de 2012 (Código Florestal Brasileiro)",
-                    "vigencia": "✅ Vigente",
-                    "descricao_resumida": "Dispõe sobre a proteção da vegetação nativa, define Áreas de Preservação Permanente e Reserva Legal",
-                    "aplicabilidade": "Obrigatória para propriedades rurais - Reserva Legal mínima de 35% no Cerrado do Tocantins"
-                },
-                {
-                    "esfera": "Federal",
-                    "titulo_legislacao": "Decreto nº 9.013, de 29 de março de 2017 (Regulamento de Inspeção Industrial)",
-                    "vigencia": "✅ Vigente",
-                    "descricao_resumida": "Regulamenta a inspeção industrial e sanitária de produtos de origem animal",
-                    "aplicabilidade": "Obrigatório para frigoríficos e abatedouros de produtos pecuários"
-                },
-                {
-                    "esfera": "Federal",
-                    "titulo_legislacao": "Lei nº 9.605, de 12 de fevereiro de 1998 (Lei de Crimes Ambientais)",
-                    "vigencia": "✅ Vigente",
-                    "descricao_resumida": "Dispõe sobre as sanções penais e administrativas derivadas de condutas e atividades lesivas ao meio ambiente",
-                    "aplicabilidade": "Define crimes ambientais aplicáveis à pecuária, como poluição hídrica e desmatamento ilegal"
-                }
-            ],
-            "Indústria": [
-                {
-                    "esfera": "Federal",
-                    "titulo_legislacao": "Lei nº 6.938, de 31 de agosto de 1981 (Política Nacional do Meio Ambiente)",
-                    "vigencia": "✅ Vigente",
-                    "descricao_resumida": "Institui a Política Nacional do Meio Ambiente, seus fins e mecanismos de formulação e aplicação",
-                    "aplicabilidade": "Licenciamento ambiental obrigatório para atividades industriais potencialmente poluidoras"
-                },
-                {
-                    "esfera": "Federal",
-                    "titulo_legislacao": "Resolução CONAMA nº 237, de 19 de dezembro de 1997",
-                    "vigencia": "✅ Vigente",
-                    "descricao_resumida": "Regulamenta os aspectos de licenciamento ambiental estabelecidos na Política Nacional do Meio Ambiente",
-                    "aplicabilidade": "Define competências e procedimentos para licenciamento de atividades industriais"
-                },
-                {
-                    "esfera": "Federal",
-                    "titulo_legislacao": "Lei nº 12.305, de 2 de agosto de 2010 (Política Nacional de Resíduos Sólidos)",
-                    "vigencia": "✅ Vigente",
-                    "descricao_resumida": "Institui a Política Nacional de Resíduos Sólidos e altera a Lei nº 9.605/1998",
-                    "aplicabilidade": "Gestão obrigatória de resíduos sólidos industriais e logística reversa"
-                }
-            ],
-            "Mineração": [
-                {
-                    "esfera": "Federal",
-                    "titulo_legislacao": "Decreto-Lei nº 227, de 28 de fevereiro de 1967 (Código de Mineração)",
-                    "vigencia": "✅ Vigente",
-                    "descricao_resumida": "Dá nova redação ao Decreto-lei nº 1.985, de 29 de janeiro de 1940 (Código de Minas)",
-                    "aplicabilidade": "Regulamenta direitos minerários e regime de aproveitamento das substâncias minerais"
-                },
-                {
-                    "esfera": "Federal",
-                    "titulo_legislacao": "Resolução CONAMA nº 237, de 19 de dezembro de 1997",
-                    "vigencia": "✅ Vigente",
-                    "descricao_resumida": "Regulamenta os aspectos de licenciamento ambiental estabelecidos na Política Nacional do Meio Ambiente",
-                    "aplicabilidade": "Licenciamento ambiental obrigatório para atividades de mineração"
-                },
-                {
-                    "esfera": "Federal",
-                    "titulo_legislacao": "Lei nº 13.540, de 18 de dezembro de 2017",
-                    "vigencia": "✅ Vigente",
-                    "descricao_resumida": "Altera as Leis nº 7.990/1989 e 8.001/1990 para dispor sobre a Compensação Financeira pela Exploração de Recursos Minerais",
-                    "aplicabilidade": "Define obrigações de compensação financeira para atividades de mineração"
-                }
-            ]
+        # 🎯 FILTRO EXPANDIDO: Palavras-chave mais abrangentes por atividade (baseado em dados reais do Pinecone)
+        palavras_chave_federais = {
+            "Agricultura": ["agric", "rural", "agropec", "plantio", "cultivo", "irrigação", "atividade rural", "produtor rural", "área de preservação", "vegetação nativa"],
+            "Pecuária": ["pecuár", "gado", "bovino", "suíno", "avícola", "frigorífico", "abate", "rebanho", "florestal", "pastagem", "criação de animais", "atividade rural"],
+            "Indústria": ["industr", "fábrica", "manufatur", "produção industrial", "poluição industrial", "resíduo", "emissão", "efluente"],
+            "Mineração": ["miner", "lavra", "garimpo", "extração mineral", "jazida", "meio ambiente", "degradação", "recuperação"],
+            "Saneamento": ["saneamento", "água", "esgoto", "resíduo", "tratamento", "abastecimento", "resíduos sólidos", "lixo", "coleta"],
+            "Energia": ["energia", "elétrica", "hidrelétrica", "solar", "eólica", "usina", "geração", "meio ambiente", "impacto ambiental"],
+            "Transporte": ["transporte", "rodoviário", "ferroviário", "aquaviário", "portuário", "aeroportuário", "logística", "combustível", "emissão veicular", "poluição atmosférica"],
+            "Construção Civil": ["construção", "edificação", "obra", "canteiro", "demolição", "resíduo da construção", "entulho", "supressão vegetal", "movimentação de terra"],
+            "Serviços": ["serviços", "prestação de serviços", "atividade terciária", "estabelecimento comercial", "geração de resíduos", "efluente sanitário"],
+            "Comércio": ["comércio", "comercial", "varejo", "atacado", "estabelecimento", "resíduo comercial", "embalagem", "descarte"],
+            "Outros": ["atividade", "empreendimento", "projeto", "desenvolvimento", "sustentável", "impacto", "mitigação", "compensação", "monitoramento"]
         }
         
-        # ⚠️ LEGISLAÇÕES GERAIS VIGENTES - aplicáveis a todas as atividades
-        legislacoes_gerais = [
-            {
-                "esfera": "Federal",
-                "titulo_legislacao": "Lei nº 9.605, de 12 de fevereiro de 1998 (Lei de Crimes Ambientais)",
-                "vigencia": "✅ Vigente",
-                "descricao_resumida": "Dispõe sobre as sanções penais e administrativas derivadas de condutas e atividades lesivas ao meio ambiente",
-                "aplicabilidade": "Aplicável a todas as atividades - define sanções por infrações ambientais"
-            },
-            {
-                "esfera": "Federal",
-                "titulo_legislacao": "Lei nº 12.305, de 2 de agosto de 2010 (Política Nacional de Resíduos Sólidos)",
-                "vigencia": "✅ Vigente",
-                "descricao_resumida": "Institui a Política Nacional de Resíduos Sólidos e altera a Lei nº 9.605/1998",
-                "aplicabilidade": "Obrigatória para gestão de resíduos sólidos em todas as atividades"
-            }
-        ]
+        # 🚫 FILTRO RESTRITIVO: Apenas palavras específicas para a atividade
+        palavras_atividade = palavras_chave_federais.get(grupo_atividade, [])
         
-        # Combinar legislações específicas e gerais
-        legislacoes = legislacoes_base.get(grupo_atividade, []) + legislacoes_gerais
+        if not palavras_atividade:
+            print(f"⚠️ Nenhuma palavra-chave específica mapeada para '{grupo_atividade}'")
+            return []
         
-        # ⚠️ APLICAR FILTRO DE VIGÊNCIA OBRIGATÓRIO
-        legislacoes_vigentes = [
-            leg for leg in legislacoes 
-            if self._verificar_vigencia_legislacao(leg)
-        ]
+        legislacoes_federais = []
         
-        return legislacoes_vigentes[:limite]
+        # 🔍 BUSCAR NAS LEIS REAIS CARREGADAS DE TODAS AS FONTES (INCLUINDO PINECONE)
+        for lei in self.todas_fontes_data:
+            # Filtrar apenas leis federais
+            jurisdicao = lei.get("jurisdicao", "").lower()
+            if "federal" not in jurisdicao:
+                continue
+            titulo = lei.get("titulo", "")
+            ementa = lei.get("ementa", "")
+            titulo_ementa = (titulo + " " + ementa).lower()
+            
+            # 🎯 VERIFICAÇÃO RIGOROSA: A lei deve conter pelo menos uma palavra-chave específica
+            if any(palavra in titulo_ementa for palavra in palavras_atividade):
+                aplicabilidade = self._gerar_aplicabilidade_federal_real(lei, grupo_atividade)
+                
+                legislacao_formatada = {
+                    "esfera": "Federal",
+                    "titulo_legislacao": titulo,
+                    "vigencia": "✅ Vigente",
+                    "descricao_resumida": ementa[:200] + "..." if len(ementa) > 200 else ementa,
+                    "aplicabilidade": aplicabilidade,
+                    "fonte_dados": "Pinecone - Dados Reais"  # 🔍 TRANSPARÊNCIA DE ORIGEM
+                }
+                
+                legislacoes_federais.append(legislacao_formatada)
+        
+        print(f"🎯 Filtro restritivo aplicado: {len(legislacoes_federais)} leis federais REAIS para '{grupo_atividade}'")
+        print(f"📊 Fonte: 100% dados reais do Pinecone")
+        return legislacoes_federais[:limite]
+    
+    def _gerar_aplicabilidade_federal_real(self, lei: Dict, grupo_atividade: str) -> str:
+        """Gera o texto da coluna "aplicabilidade" da tabela, baseado EXCLUSIVAMENTE nos dados reais da lei"""
+        
+        titulo = lei.get("titulo", "").lower()
+        ementa = lei.get("ementa", "").lower()
+        
+        # 🔍 ANÁLISE BASEADA EXCLUSIVAMENTE EM DADOS REAIS
+        # Extrair informações relevantes da ementa real da lei
+        if "meio ambiente" in ementa and "licenciamento" in ementa:
+            return f"Licenciamento ambiental aplicável a atividades de {grupo_atividade.lower()} conforme ementa da lei"
+        elif "florestal" in ementa or "floresta" in ementa:
+            return f"Regulamentação florestal aplicável a atividades de {grupo_atividade.lower()} conforme ementa da lei"
+        elif "crimes" in ementa and "ambiental" in ementa:
+            return f"Define crimes ambientais aplicáveis a {grupo_atividade.lower()} conforme ementa da lei"
+        elif "resíduos" in ementa or "resíduo" in ementa:
+            return f"Gestão de resíduos aplicável a atividades de {grupo_atividade.lower()} conforme ementa da lei"
+        elif "água" in ementa or "hídrico" in ementa:
+            return f"Gestão de recursos hídricos aplicável a atividades de {grupo_atividade.lower()} conforme ementa da lei"
+        elif "conservação" in ementa or "proteção" in ementa:
+            return f"Conservação ambiental aplicável a atividades de {grupo_atividade.lower()} conforme ementa da lei"
+        else:
+            # 🚨 TRANSPARÊNCIA TOTAL: Usar apenas dados reais da ementa
+            ementa_resumida = ementa[:100] + "..." if len(ementa) > 100 else ementa
+            return f"Aplicável a atividades de {grupo_atividade.lower()}: {ementa_resumida}"
 
     def _legislacoes_estaduais(self, municipio: str, grupo_atividade: str, limite: int) -> List[Dict]:
-        """Retorna legislações estaduais do Tocantins aplicáveis"""
+        """Retorna APENAS legislações estaduais REAIS do Pinecone relacionadas ao grupo de atividade"""
         
-        # Buscar nas leis reais do Tocantins
-        legislacoes_estaduais = []
-        
-        # Filtrar leis relevantes para o grupo de atividade
-        palavras_chave = {
-            "Agricultura": ["agric", "rural", "agropec", "plantio", "cultivo"],
-            "Pecuária": ["pecuár", "gado", "bovino", "suíno", "avícola", "frigorífico"],
-            "Indústria": ["industr", "fábrica", "manufatur", "produção"],
-            "Mineração": ["miner", "lavra", "garimpo", "extração"],
-            "Saneamento": ["saneamento", "água", "esgoto", "resíduo"],
-            "Energia": ["energia", "elétrica", "hidrelétrica", "solar", "eólica"]
+        # 🎯 FILTRO EXPANDIDO: Palavras-chave mais abrangentes por atividade (baseado em dados reais do Pinecone)
+        palavras_chave_restritivas = {
+            "Agricultura": ["licenciamento ambiental", "gestão ambiental", "sustentabilidade ambiental", "zoneamento ambiental", "passivo ambiental", "impactos ambientais", "gestão de resíduos sólidos", "resíduos perigosos", "compostagem", "aterro sanitário", "reciclagem", "reutilização", "poluição difusa", "contaminação do solo", "recursos hídricos", "bacia hidrográfica", "outorga de uso da água", "índice de qualidade da água", "eutrofização", "tratamento de efluentes", "esgotamento sanitário", "água subterrânea", "emissões atmosféricas", "material particulado", "biodiversidade", "fragmentação de habitats", "corredores ecológicos", "plano de gerenciamento de resíduos sólidos", "inventário florestal"],
+            "Pecuária": ["pecuár", "gado", "bovino", "suíno", "avícola", "frigorífico", "abate", "rebanho", "pastagem", "criação de animais", "atividade rural", "ambiental", "meio ambiente", "recursos", "licenciamento"],
+            "Indústria": ["industr", "fábrica", "manufatur", "produção industrial", "poluição industrial", "emissão", "efluente", "ambiental", "meio ambiente", "licenciamento"],
+            "Mineração": ["miner", "lavra", "garimpo", "extração mineral", "jazida", "degradação", "recuperação", "ambiental", "meio ambiente", "licenciamento"],
+            "Saneamento": ["saneamento", "água", "esgoto", "resíduo", "tratamento", "abastecimento", "lixo", "coleta", "ambiental", "meio ambiente", "recursos hídricos"],
+            "Energia": ["energia", "elétrica", "hidrelétrica", "solar", "eólica", "usina", "geração", "impacto ambiental", "ambiental", "meio ambiente", "licenciamento"],
+            "Transporte": ["transporte", "rodoviário", "ferroviário", "aquaviário", "portuário", "aeroportuário", "logística", "combustível", "emissão veicular", "poluição atmosférica", "ruído", "impacto viário", "ambiental", "meio ambiente", "licenciamento"],
+            "Construção Civil": ["construção", "edificação", "obra", "canteiro", "demolição", "resíduo da construção", "entulho", "supressão vegetal", "movimentação de terra", "drenagem", "impermeabilização", "ambiental", "meio ambiente", "licenciamento"],
+            "Serviços": ["serviços", "prestação de serviços", "atividade terciária", "estabelecimento comercial", "geração de resíduos", "efluente sanitário", "consumo de água", "energia elétrica", "ambiental", "meio ambiente", "licenciamento"],
+            "Comércio": ["comércio", "comercial", "varejo", "atacado", "estabelecimento", "resíduo comercial", "embalagem", "descarte", "consumo", "sustentabilidade", "ambiental", "meio ambiente", "licenciamento"],
+            "Outros": ["atividade", "empreendimento", "projeto", "desenvolvimento", "sustentável", "impacto", "mitigação", "compensação", "monitoramento", "controle", "ambiental", "meio ambiente", "licenciamento"]
         }
         
-        palavras_atividade = palavras_chave.get(grupo_atividade, ["ambiental"])
+        # 🚫 FILTRO RESTRITIVO: Apenas palavras específicas para a atividade
+        palavras_atividade = palavras_chave_restritivas.get(grupo_atividade, [])
         
-        # Buscar nas leis carregadas
-        for lei in self.leis_data[:limite*2]:  # Buscar mais para filtrar
+        if not palavras_atividade:
+            print(f"⚠️ Nenhuma palavra-chave específica mapeada para '{grupo_atividade}'")
+            return []
+        
+        legislacoes_estaduais = []
+        
+        # 🔍 BUSCAR NAS LEIS REAIS CARREGADAS DE TODAS AS FONTES (INCLUINDO PINECONE)
+        for lei in self.todas_fontes_data:
+            # Filtrar apenas leis estaduais (incluindo "Estadual - Tocantins")
+            jurisdicao = lei.get("jurisdicao", "").lower()
+            if "estadual" not in jurisdicao:
+                continue
             titulo_desc = (lei.get("titulo", "") + " " + lei.get("descricao", "")).lower()
             
-            # Verificar se a lei é relevante para a atividade
+            # 🎯 VERIFICAÇÃO RIGOROSA: A lei deve conter pelo menos uma palavra-chave específica
             if any(palavra in titulo_desc for palavra in palavras_atividade):
                 legislacoes_estaduais.append({
                     "esfera": "Estadual",
                     "titulo_legislacao": lei.get("titulo", "Lei Estadual"),
                     "vigencia": "✅ Vigente",
                     "descricao_resumida": lei.get("descricao", "")[:150] + "..." if len(lei.get("descricao", "")) > 150 else lei.get("descricao", ""),
-                    "aplicabilidade": f"Aplicável a atividades de {grupo_atividade.lower()} no estado do Tocantins"
+                    "aplicabilidade": f"Aplicável especificamente a atividades de {grupo_atividade.lower()} no estado do Tocantins",
+                    "fonte_dados": "Pinecone - Dados Reais"  # 🔍 TRANSPARÊNCIA DE ORIGEM
                 })
         
-        # ⚠️ LEGISLAÇÕES ESTADUAIS VIGENTES DO TOCANTINS
-        if not legislacoes_estaduais:
-            legislacoes_estaduais = [
-                {
-                    "esfera": "Estadual",
-                    "titulo_legislacao": "Lei Estadual nº 1.307, de 22 de março de 2002 (Política Estadual do Meio Ambiente do Tocantins)",
-                    "vigencia": "✅ Vigente",
-                    "descricao_resumida": "Institui a Política Estadual do Meio Ambiente, cria o Sistema Estadual do Meio Ambiente e dá outras providências",
-                    "aplicabilidade": f"Aplicável a todas as atividades de {grupo_atividade.lower()} no estado do Tocantins"
-                },
-                {
-                    "esfera": "Estadual",
-                    "titulo_legislacao": "Decreto Estadual nº 4.632, de 30 de abril de 2013 (Regulamento do NATURATINS)",
-                    "vigencia": "✅ Vigente",
-                    "descricao_resumida": "Regulamenta o licenciamento ambiental no âmbito do Instituto Natureza do Tocantins - NATURATINS",
-                    "aplicabilidade": f"Define procedimentos de licenciamento ambiental para atividades de {grupo_atividade.lower()}"
-                },
-                {
-                    "esfera": "Estadual",
-                    "titulo_legislacao": "Lei Estadual nº 1.560, de 29 de dezembro de 2004 (Código Florestal do Estado do Tocantins)",
-                    "vigencia": "✅ Vigente",
-                    "descricao_resumida": "Dispõe sobre a Política Florestal do Estado do Tocantins e dá outras providências",
-                    "aplicabilidade": f"Regulamenta atividades florestais relacionadas a {grupo_atividade.lower()} no Tocantins"
-                }
-            ]
+        # ✅ Usando apenas dados reais carregados do Pinecone
+        # ✅ AGORA USA APENAS DADOS REAIS DO PINECONE
         
         # ⚠️ APLICAR FILTRO DE VIGÊNCIA OBRIGATÓRIO
         legislacoes_vigentes = [
@@ -801,34 +428,58 @@ class IATabela:
             if self._verificar_vigencia_legislacao(leg)
         ]
         
+        print(f"🎯 Filtro restritivo aplicado: {len(legislacoes_vigentes)} leis estaduais REAIS para '{grupo_atividade}'")
+        print(f"📊 Fonte: 100% dados reais do Pinecone")
         return legislacoes_vigentes[:limite]
 
     def _legislacoes_municipais(self, municipio: str, grupo_atividade: str, limite: int) -> List[Dict]:
-        """Retorna legislações municipais aplicáveis"""
+        """Retorna APENAS legislações municipais REAIS do Pinecone relacionadas ao grupo de atividade"""
         
-        return [
-            {
-                "esfera": "Municipal",
-                "titulo_legislacao": f"Lei Orgânica do Município de {municipio}",
-                "vigencia": "✅ Vigente",
-                "descricao_resumida": "Define competências municipais em matéria ambiental",
-                "aplicabilidade": f"Estabelece diretrizes locais para atividades de {grupo_atividade.lower()}"
-            },
-            {
-                "esfera": "Municipal",
-                "titulo_legislacao": f"Plano Diretor de {municipio}",
-                "vigencia": "✅ Vigente",
-                "descricao_resumida": "Regulamenta o uso e ocupação do solo municipal",
-                "aplicabilidade": f"Define zoneamento e restrições para {grupo_atividade.lower()}"
-            },
-            {
-                "esfera": "Municipal",
-                "titulo_legislacao": f"Código de Posturas de {municipio}",
-                "vigencia": "✅ Vigente",
-                "descricao_resumida": "Estabelece normas de conduta e funcionamento no município",
-                "aplicabilidade": f"Regulamenta aspectos operacionais de {grupo_atividade.lower()}"
-            }
-        ]
+        # 🎯 FILTRO EXPANDIDO: Palavras-chave mais abrangentes por atividade (baseado em dados reais do Pinecone)
+        palavras_chave_municipais = {
+            "Agricultura": ["licenciamento ambiental", "gestão ambiental", "sustentabilidade ambiental", "zoneamento ambiental", "passivo ambiental", "impactos ambientais", "gestão de resíduos sólidos", "resíduos perigosos", "compostagem", "aterro sanitário", "reciclagem", "reutilização", "poluição difusa", "contaminação do solo", "recursos hídricos", "bacia hidrográfica", "outorga de uso da água", "índice de qualidade da água", "eutrofização", "tratamento de efluentes", "esgotamento sanitário", "água subterrânea", "emissões atmosféricas", "material particulado", "biodiversidade", "fragmentação de habitats", "corredores ecológicos", "plano de gerenciamento de resíduos sólidos", "inventário florestal"],
+            "Pecuária": ["pecuár", "gado", "bovino", "suíno", "avícola", "sanitário", "plano diretor", "pastagem", "criação de animais", "atividade rural", "ambiental", "meio ambiente", "recursos", "licenciamento"],
+            "Indústria": ["industr", "fábrica", "manufatur", "zoneamento industrial", "obras", "plano diretor", "emissão", "efluente", "ambiental", "meio ambiente", "licenciamento"],
+            "Mineração": ["miner", "lavra", "garimpo", "extração", "plano diretor", "degradação", "recuperação", "ambiental", "meio ambiente", "licenciamento"],
+            "Saneamento": ["saneamento", "água", "esgoto", "resíduo", "abastecimento", "plano diretor", "lixo", "coleta", "ambiental", "meio ambiente", "recursos hídricos"],
+            "Energia": ["energia", "elétrica", "renovável", "solar", "eólica", "plano diretor", "impacto ambiental", "ambiental", "meio ambiente", "licenciamento"],
+            "Transporte": ["transporte", "trânsito", "mobilidade urbana", "plano diretor", "sistema viário", "poluição sonora", "emissão veicular", "ambiental", "meio ambiente", "licenciamento"],
+            "Construção Civil": ["construção", "edificação", "obra", "alvará", "plano diretor", "código de obras", "resíduo da construção", "supressão vegetal", "ambiental", "meio ambiente", "licenciamento"],
+            "Serviços": ["serviços", "estabelecimento", "atividade econômica", "plano diretor", "zoneamento", "geração de resíduos", "ambiental", "meio ambiente", "licenciamento"],
+            "Comércio": ["comércio", "comercial", "estabelecimento", "atividade econômica", "plano diretor", "zoneamento comercial", "resíduo comercial", "ambiental", "meio ambiente", "licenciamento"],
+            "Outros": ["atividade", "empreendimento", "projeto", "plano diretor", "zoneamento", "uso do solo", "impacto", "ambiental", "meio ambiente", "licenciamento"]
+        }
+        
+        # 🚫 FILTRO RESTRITIVO: Apenas palavras específicas para a atividade
+        palavras_atividade = palavras_chave_municipais.get(grupo_atividade, [])
+        
+        if not palavras_atividade:
+            print(f"⚠️ Nenhuma palavra-chave específica mapeada para '{grupo_atividade}'")
+            return []
+        
+        legislacoes_municipais = []
+        
+        # 🔍 BUSCAR NAS LEIS REAIS CARREGADAS DE TODAS AS FONTES (INCLUINDO PINECONE)
+        for lei in self.todas_fontes_data:
+            # Filtrar apenas leis municipais (incluindo "Municipal - [Nome do Município]")
+            jurisdicao = lei.get("jurisdicao", "").lower()
+            if "municipal" not in jurisdicao:
+                continue
+            titulo_desc = (lei.get("titulo", "") + " " + lei.get("descricao", "")).lower()
+            
+            # 🎯 VERIFICAÇÃO RIGOROSA: A lei deve conter palavra-chave específica
+            if any(palavra in titulo_desc for palavra in palavras_atividade):
+                legislacoes_municipais.append({
+                    "esfera": "Municipal",
+                    "titulo_legislacao": lei.get("titulo", "Lei Municipal"),
+                    "vigencia": "✅ Vigente",
+                    "descricao_resumida": lei.get("descricao", "")[:150] + "..." if len(lei.get("descricao", "")) > 150 else lei.get("descricao", ""),
+                    "aplicabilidade": f"Aplicável especificamente a atividades de {grupo_atividade.lower()} no município de {municipio}",
+                    "fonte_dados": "Pinecone - Dados Reais"  # 🔍 TRANSPARÊNCIA DE ORIGEM
+                })
+        
+        # ✅ Aguardando indexação de dados municipais reais no Pinecone
+        # ✅ AGORA USA APENAS DADOS REAIS DO PINECONE
         
         # ⚠️ APLICAR FILTRO DE VIGÊNCIA OBRIGATÓRIO
         legislacoes_vigentes = [
@@ -836,40 +487,10 @@ class IATabela:
             if self._verificar_vigencia_legislacao(leg)
         ]
         
+        print(f"🎯 Filtro restritivo aplicado: {len(legislacoes_vigentes)} leis municipais REAIS para '{grupo_atividade}' em {municipio}")
+        print(f"📊 Fonte: 100% dados reais do Pinecone")
+        print(f"ℹ️ Nota: Dados municipais específicos serão incluídos conforme indexação no Pinecone")
         return legislacoes_vigentes[:limite]
-
-    def _quadro_exemplo(self, municipio: str, grupo_atividade: str, esferas: List[str]) -> pd.DataFrame:
-        """Quadro-resumo de exemplo em caso de erro"""
-        dados_exemplo = []
-        
-        if "Federal" in esferas:
-            dados_exemplo.append({
-                "esfera": "Federal",
-                "titulo_legislacao": "Lei 6.938/1981 – Política Nacional do Meio Ambiente",
-                "vigencia": "✅ Vigente",
-                "descricao_resumida": "Estabelece instrumentos da política ambiental nacional",
-                "aplicabilidade": f"Licenciamento ambiental obrigatório para {grupo_atividade.lower()}"
-            })
-        
-        if "Estadual" in esferas:
-            dados_exemplo.append({
-                "esfera": "Estadual",
-                "titulo_legislacao": "Lei Estadual nº 1.307/2002 – Política Ambiental TO",
-                "vigencia": "✅ Vigente",
-                "descricao_resumida": "Institui a Política Estadual do Meio Ambiente do Tocantins",
-                "aplicabilidade": f"Aplicável a atividades de {grupo_atividade.lower()} no estado"
-            })
-        
-        if "Municipal" in esferas:
-            dados_exemplo.append({
-                "esfera": "Municipal",
-                "titulo_legislacao": f"Plano Diretor de {municipio}",
-                "vigencia": "✅ Vigente",
-                "descricao_resumida": "Regulamenta o uso e ocupação do solo municipal",
-                "aplicabilidade": f"Define zoneamento para {grupo_atividade.lower()}"
-            })
-        
-        return pd.DataFrame(dados_exemplo)
 
     def gerar_estrutura_tabela(self, descricao_usuario: str) -> Dict[str, Any]:
         """
@@ -877,7 +498,7 @@ class IATabela:
         usando IA direcionada da OpenAI
         """
         
-        # Prompt direcionado para geração de estrutura de tabela
+        # Prompt direcionado APENAS para a geração da estrutura da tabela
         prompt_sistema = """
         Você é uma IA especializada em organizar dados de leis ambientais em tabelas.
         Sua função é APENAS gerar estruturas de tabelas baseadas na descrição do usuário.
@@ -998,7 +619,7 @@ class IATabela:
     
     def gerar_tabela_vazia(self, estrutura: Dict[str, Any]) -> pd.DataFrame:
         """
-        Gera uma tabela vazia baseada na estrutura fornecida
+        A IA gera uma tabela vazia baseada no prompt com a estrutura fornecida
         """
         colunas = [col["nome"] for col in estrutura["colunas"]]
         df_vazio = pd.DataFrame(columns=colunas)
@@ -1028,8 +649,10 @@ class IATabela:
                 dados_fonte = self.todas_fontes_data[:num_documentos]
                 print(f"📊 Populando tabela com {len(dados_fonte)} documentos de TODAS as fontes")
             else:
-                dados_fonte = self.leis_data[:num_documentos]
-                print(f"📊 Populando tabela com {len(dados_fonte)} leis estaduais")
+                # Filtrar apenas leis estaduais dos dados do Pinecone
+                dados_estaduais = [d for d in self.todas_fontes_data if d.get('jurisdicao', '').startswith('Estadual')]
+                dados_fonte = dados_estaduais[:num_documentos]
+                print(f"📊 Populando tabela com {len(dados_fonte)} leis estaduais do Pinecone")
             
             # Processar cada documento
             dados_processados = []
@@ -1216,3 +839,46 @@ class IATabela:
 """
         
         return relatorio
+
+
+if __name__ == "__main__":
+    """Teste do sistema de carregamento de dados"""
+    print("🧪 TESTANDO SISTEMA DE CARREGAMENTO DE DADOS")
+    print("=" * 60)
+    
+    try:
+        # Inicializar o serviço
+        ia_tabela = IATabela()
+        
+        # Verificar carregamento das fontes (todos do Pinecone)
+        dados_pinecone = ia_tabela.todas_fontes_data
+        dados_estaduais = [d for d in dados_pinecone if d.get('jurisdicao', '').startswith('Estadual')]
+        dados_federais = [d for d in dados_pinecone if d.get('jurisdicao') == 'Federal']
+        dados_municipais = [d for d in dados_pinecone if d.get('jurisdicao', '').startswith('Municipal')]
+        
+        print(f"\n📊 RESUMO DOS DADOS CARREGADOS (PINECONE APENAS):")
+        print(f"   • Leis Estaduais: {len(dados_estaduais)} documentos")
+        print(f"   • Leis Federais: {len(dados_federais)} documentos")
+        print(f"   • Leis Municipais: {len(dados_municipais)} documentos")
+        print(f"   • Total de todas as fontes: {len(dados_pinecone)} documentos")
+        
+        # Verificar detalhes do EIA/RIMA
+        if ia_tabela.leis_eia_rima and "leis_eia_rima" in ia_tabela.leis_eia_rima:
+            print(f"\n🔍 DETALHES EIA/RIMA:")
+            for lei_info in ia_tabela.leis_eia_rima["leis_eia_rima"]:
+                print(f"   • {lei_info.get('numero', 'N/A')}: {lei_info.get('titulo', 'Sem título')}")
+        
+        # Verificar Artigo 225
+        if ia_tabela.constituicao_artigo_225:
+            print(f"\n📜 ARTIGO 225:")
+            for artigo in ia_tabela.constituicao_artigo_225:
+                print(f"   • Título: {artigo.get('titulo', 'N/A')}")
+                print(f"   • URL: {artigo.get('url', 'N/A')}")
+                break  # Apenas o primeiro (único) artigo
+        
+        print(f"\n✅ TESTE CONCLUÍDO COM SUCESSO!")
+        
+    except Exception as e:
+        print(f"❌ ERRO NO TESTE: {e}")
+        import traceback
+        traceback.print_exc()

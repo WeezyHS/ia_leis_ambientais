@@ -265,6 +265,7 @@ class CONAMAScraper(BaseScraper):
         
         # Carrega dados já coletados do CONAMA
         conama_files = [
+            "conama_data_20250811_111053.json",
             "conama_data_20250805_150217.json",
             "conama_data_20250805_145759.json"
         ]
