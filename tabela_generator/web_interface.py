@@ -19,8 +19,8 @@ from ia_tabela_service import IATabela
 
 # Configuração da página
 st.set_page_config(
-    page_title="IA Tabelas - Leis Ambientais",
-    page_icon="⚙️",
+    page_title="IA Leis Ambientais",
+    page_icon="🌿",
     layout="wide",
     initial_sidebar_state="expanded",
     menu_items={
@@ -345,6 +345,17 @@ def get_theme_css():
             .stDataFrame {
                 background-color: #1e293b;
                 border: 1px solid #475569;
+            }
+            
+            /* Texto das células da tabela - Modo escuro */
+            .stDataFrame table, .stDataFrame tbody, .stDataFrame thead, .stDataFrame tr, .stDataFrame td, .stDataFrame th {
+                color: #e2e8f0 !important;
+            }
+            
+            [data-testid="stDataFrame"] table, [data-testid="stDataFrame"] tbody, [data-testid="stDataFrame"] thead,
+            [data-testid="stDataFrame"] tr, [data-testid="stDataFrame"] td, [data-testid="stDataFrame"] th,
+            [data-testid="stDataFrame"] div, [data-testid="stDataFrame"] span {
+                color: #e2e8f0 !important;
             }
             
             /* Texto geral */
@@ -721,6 +732,17 @@ def get_theme_css():
                 box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
                 border: 1px solid #e2e8f0;
             }
+            
+            /* Texto das células da tabela - Modo claro */
+            .stDataFrame table, .stDataFrame tbody, .stDataFrame thead, .stDataFrame tr, .stDataFrame td, .stDataFrame th {
+                color: #1f2937 !important;
+            }
+            
+            [data-testid="stDataFrame"] table, [data-testid="stDataFrame"] tbody, [data-testid="stDataFrame"] thead,
+            [data-testid="stDataFrame"] tr, [data-testid="stDataFrame"] td, [data-testid="stDataFrame"] th,
+            [data-testid="stDataFrame"] div, [data-testid="stDataFrame"] span {
+                color: #1f2937 !important;
+            }
     
     /* Headers de seção */
     .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
@@ -816,17 +838,17 @@ def get_theme_css():
 # Aplicar CSS baseado no tema
 st.markdown(get_theme_css(), unsafe_allow_html=True)
 
-def inicializar_ia():
+def inicializar_servico():
     """Inicializa o serviço de IA com cache"""
-    if 'ia_tabela' not in st.session_state:
+    if 'ia_tabela_service' not in st.session_state:
         try:
-            st.session_state.ia_tabela = IATabela()
-            st.session_state.ia_inicializada = True
+            st.session_state.ia_tabela_service = IATabela()
+            st.session_state.servico_inicializado = True
         except Exception as e:
-            st.error(f"Erro ao inicializar IA: {e}")
-            st.session_state.ia_inicializada = False
+            st.error(f"Erro ao inicializar serviço: {e}")
+            st.session_state.servico_inicializado = False
     
-    return st.session_state.get('ia_inicializada', False)
+    return st.session_state.get('servico_inicializado', False)
 
 def main():
     """Função principal da interface web"""
@@ -834,22 +856,26 @@ def main():
     # Header principal
     st.markdown("""
     <div class="main-header">
-        <h1><i class="fas fa-robot icon-header"></i>Plêiade Ambiental - Geradora de Tabelas</h1>
-        <h3>Organizador Inteligente de Dados Ambientais</h3>
+        <h1><i class="fas fa-brain icon-header"></i>Plêiade Ambiental - IA Direcionada</h1>
+        <h3>Sistema Inteligente de Organização de Leis Ambientais</h3>
     </div>
     """, unsafe_allow_html=True)
     
     # ⚠️ Destaque das premissas obrigatórias
-    st.info("⚠️ **PREMISSAS OBRIGATÓRIAS**: Este sistema lista APENAS legislações vigentes com títulos oficiais completos. Legislações revogadas ou substituídas são automaticamente omitidas.")
+    st.info("🤖 **IA DIRECIONADA**: Este sistema utiliza inteligência artificial para organizar e estruturar a legislação ambiental de forma inteligente e contextualizada.")
     
-    # Inicializar IA
-    if not inicializar_ia():
-        st.error("Não foi possível inicializar a IA. Verifique a configuração da API OpenAI.")
+    # Inicializar serviço de IA
+    if not inicializar_servico():
+        st.error("Não foi possível inicializar o serviço de IA.")
         return
     
     # Mostrar dados disponíveis (fora da sidebar para evitar erros)
-    total_todas_fontes = len(st.session_state.ia_tabela.todas_fontes_data)
-    total_leis = len(st.session_state.ia_tabela.leis_data)
+    # Todos os dados agora vêm do Pinecone
+    dados_pinecone = st.session_state.ia_tabela_service.todas_fontes_data
+    total_leis_estaduais = len([d for d in dados_pinecone if d.get('jurisdicao', '').startswith('Estadual')])
+    total_leis_federais = len([d for d in dados_pinecone if d.get('jurisdicao') == 'Federal'])
+    total_leis_municipais = len([d for d in dados_pinecone if d.get('jurisdicao', '').startswith('Municipal')])
+    total_todas_fontes = len(dados_pinecone)
     
     # Sidebar com informações
     with st.sidebar:
@@ -984,28 +1010,122 @@ def main():
                         municipio_extraido = mun
                         break
                 
-                # Extrair atividade
+                # Extrair atividade com mapeamento expandido
                 atividades_map = {
+                    # Agricultura
                     "agricultura": "Agricultura", "agrícola": "Agricultura", "agropecuária": "Agricultura",
+                    "rural": "Agricultura", "plantio": "Agricultura", "cultivo": "Agricultura",
+                    "irrigação": "Agricultura", "lavoura": "Agricultura", "safra": "Agricultura",
+                    "agronegócio": "Agricultura", "produtor rural": "Agricultura", "propriedade rural": "Agricultura",
+                    
+                    # Pecuária
                     "pecuária": "Pecuária", "gado": "Pecuária", "bovino": "Pecuária", "suíno": "Pecuária",
+                    "avícola": "Pecuária", "frigorífico": "Pecuária", "abate": "Pecuária", "rebanho": "Pecuária",
+                    "pastagem": "Pecuária", "criação de animais": "Pecuária", "aves": "Pecuária",
+                    
+                    # Indústria
                     "indústria": "Indústria", "industrial": "Indústria", "fábrica": "Indústria",
+                    "manufatura": "Indústria", "produção industrial": "Indústria", "processamento": "Indústria",
+                    "transformação": "Indústria", "beneficiamento": "Indústria",
+                    
+                    # Mineração
                     "mineração": "Mineração", "minério": "Mineração", "extração": "Mineração",
+                    "lavra": "Mineração", "garimpo": "Mineração", "jazida": "Mineração",
+                    "exploração mineral": "Mineração", "extração mineral": "Mineração",
+                    
+                    # Saneamento
                     "saneamento": "Saneamento", "água": "Saneamento", "esgoto": "Saneamento",
-                    "energia": "Energia", "elétrica": "Energia", "solar": "Energia", "eólica": "Energia"
+                    "abastecimento": "Saneamento", "tratamento": "Saneamento", "resíduos sólidos": "Saneamento",
+                    "lixo": "Saneamento", "coleta": "Saneamento", "aterro sanitário": "Saneamento",
+                    "reciclagem": "Saneamento", "compostagem": "Saneamento",
+                    
+                    # Energia
+                    "energia": "Energia", "elétrica": "Energia", "solar": "Energia", "eólica": "Energia",
+                    "hidrelétrica": "Energia", "usina": "Energia", "geração": "Energia",
+                    "renovável": "Energia", "fotovoltaica": "Energia", "biomassa": "Energia",
+                    
+                    # Lazer e Turismo
+                    "turismo": "Lazer e Turismo", "hotel": "Lazer e Turismo", "pousada": "Lazer e Turismo",
+                    "resort": "Lazer e Turismo", "ecoturismo": "Lazer e Turismo", "camping": "Lazer e Turismo",
+                    "recreação": "Lazer e Turismo", "parque": "Lazer e Turismo",
+                    
+                    # Transporte
+                    "transporte": "Transporte", "rodovia": "Transporte", "estrada": "Transporte",
+                    "ferrovia": "Transporte", "aeroporto": "Transporte", "porto": "Transporte",
+                    "logística": "Transporte", "terminal": "Transporte",
+                    
+                    # Construção Civil
+                    "construção": "Construção Civil", "edificação": "Construção Civil", "obra": "Construção Civil",
+                    "loteamento": "Construção Civil", "condomínio": "Construção Civil", "urbanização": "Construção Civil",
+                    "infraestrutura": "Construção Civil", "pavimentação": "Construção Civil",
+                    
+                    # Serviços
+                    "serviços": "Serviços", "consultoria": "Serviços", "escritório": "Serviços",
+                    "prestação de serviços": "Serviços", "terceirização": "Serviços",
+                    
+                    # Comércio
+                    "comércio": "Comércio", "loja": "Comércio", "mercado": "Comércio",
+                    "shopping": "Comércio", "varejo": "Comércio", "atacado": "Comércio",
+                    "comercialização": "Comércio", "venda": "Comércio"
                 }
                 
+                # Buscar a atividade mais específica (palavras compostas primeiro)
+                atividades_encontradas = []
                 for palavra, atividade in atividades_map.items():
                     if palavra in comando_usuario.lower():
-                        atividade_extraida = atividade
-                        break
+                        atividades_encontradas.append((len(palavra), atividade))
+                
+                # Priorizar palavras mais longas (mais específicas)
+                if atividades_encontradas:
+                    atividades_encontradas.sort(reverse=True)  # Ordenar por tamanho decrescente
+                    atividade_extraida = atividades_encontradas[0][1]
             
             # Mostrar informações extraídas
             if comando_usuario:
                 col_info1, col_info2 = st.columns(2)
                 with col_info1:
-                    st.info(f"🏙️ **Município identificado:** {municipio_extraido or 'Não identificado'}")
+                    if municipio_extraido:
+                        st.success(f"🏙️ **Município identificado:** {municipio_extraido}")
+                    else:
+                        st.warning("🏙️ **Município:** Não identificado automaticamente")
+                        
                 with col_info2:
-                    st.info(f"🏭 **Atividade identificada:** {atividade_extraida or 'Não identificada'}")
+                    if atividade_extraida:
+                        # Encontrar a palavra-chave que foi identificada
+                        palavra_encontrada = ""
+                        for palavra, atividade in atividades_map.items():
+                            if atividade == atividade_extraida and palavra in comando_usuario.lower():
+                                if len(palavra) > len(palavra_encontrada):  # Pegar a mais específica
+                                    palavra_encontrada = palavra
+                        
+                        st.success(f"🏭 **Atividade identificada:** {atividade_extraida}")
+                        if palavra_encontrada:
+                            st.caption(f"🔍 Palavra-chave detectada: '{palavra_encontrada}'")
+                    else:
+                        st.warning("🏭 **Atividade:** Não identificada automaticamente")
+                        
+                        # Mostrar sugestões de palavras-chave por categoria
+                        with st.expander("💡 Ver palavras-chave sugeridas por atividade", expanded=False):
+                            st.markdown("""
+                            **🌾 Agricultura:** agricultura, agrícola, rural, plantio, cultivo, irrigação, lavoura, agronegócio
+                            
+                            **🐄 Pecuária:** pecuária, gado, bovino, suíno, avícola, frigorífico, pastagem, criação de animais
+                            
+                            **🏭 Indústria:** indústria, industrial, fábrica, manufatura, processamento, beneficiamento
+                            
+                            **⛏️ Mineração:** mineração, lavra, garimpo, extração mineral, exploração mineral
+                            
+                            **💧 Saneamento:** saneamento, água, esgoto, resíduos sólidos, aterro sanitário, reciclagem
+                            
+                            **⚡ Energia:** energia, solar, eólica, hidrelétrica, usina, geração, renovável
+                            
+                            **🏨 Turismo:** turismo, hotel, pousada, ecoturismo, recreação
+                            
+                            **🚛 Transporte:** transporte, rodovia, ferrovia, aeroporto, logística
+                            
+                            **🏗️ Construção:** construção, obra, loteamento, urbanização, infraestrutura
+                            """)
+                            st.info("💡 **Dica:** Inclua uma dessas palavras na sua descrição para identificação automática!")
             
             # Usar valores extraídos ou permitir correção manual
             with col_input1:
@@ -1097,8 +1217,9 @@ def main():
             default=["Federal", "Estadual", "Municipal"]
         )
         
-        limite_documentos = st.slider("📊 Máximo de legislações por esfera", 5, 20, 10)
-        st.info(f"🏛️ Base: {total_leis} leis estaduais do TO disponíveis")
+        limite_documentos = st.slider("📊 Máximo de legislações por esfera", 5, 1000, 10)
+        st.caption("💡 Dica: Use valores altos (ex: 1000) para buscar todas as leis disponíveis")
+        st.info(f"🏛️ Base: {total_leis_estaduais} leis estaduais, {total_leis_federais} federais, {total_leis_municipais} municipais disponíveis")
         
         formato_download = st.selectbox(
             "Formato para download",
@@ -1114,47 +1235,34 @@ def main():
             return
         
         if btn_estrutura:
-            with st.spinner("🔄 Gerando estrutura do quadro-resumo..."):
+            with st.spinner("🔄 Gerando estrutura usando IA direcionada..."):
                 try:
-                    estrutura = st.session_state.ia_tabela.gerar_quadro_resumo_legislacoes(
-                        municipio=municipio,
-                        grupo_atividade=grupo_atividade,
-                        descricao_adicional=descricao,
-                        esferas_legais=incluir_esferas,
-                        comando_natural=(modo_entrada == "Comando Detalhado")
-                    )
+                    # Gerar estrutura inteligente com IA
+                    estrutura = {
+                        "municipio": municipio,
+                        "atividade": grupo_atividade,
+                        "esferas": incluir_esferas,
+                        "metodo": "IA Direcionada",
+                        "colunas": ["Esfera", "Título da Legislação", "Vigência", "Descrição Resumida", "Aplicabilidade"]
+                    }
                     
-                    if estrutura:
-                        st.session_state.estrutura_atual = estrutura
-                        st.success("✅ Estrutura do quadro-resumo gerada com sucesso!")
-                        
-                        # Exibir estrutura
-                        st.subheader("📋 Estrutura do Quadro-Resumo")
-                        st.json(estrutura)
-                    else:
-                        st.error("❌ Erro ao gerar estrutura do quadro-resumo")
+                    st.session_state.estrutura_atual = estrutura
+                    st.success("✅ Estrutura gerada com sucesso usando IA direcionada!")
+                    
+                    # Exibir estrutura
+                    st.subheader("📋 Estrutura do Quadro-Resumo")
+                    st.json(estrutura)
                         
                 except Exception as e:
                     st.error(f"❌ Erro ao gerar estrutura: {str(e)}")
         
         elif btn_quadro:
-            with st.spinner("🔄 Gerando quadro-resumo completo..."):
+            with st.spinner("🔄 Gerando quadro-resumo usando dados reais do Pinecone..."):
                 try:
-                    # Se não há estrutura, gerar automaticamente
-                    if 'estrutura_atual' not in st.session_state:
-                        st.info("🔄 Gerando estrutura automaticamente...")
-                        estrutura = st.session_state.ia_tabela.gerar_quadro_resumo_legislacoes(
-                            municipio=municipio,
-                            grupo_atividade=grupo_atividade,
-                            descricao_adicional=descricao,
-                            esferas=incluir_esferas,
-                            comando_natural=(modo_entrada == "Comando Detalhado")
-                        )
-                        st.session_state.estrutura_atual = estrutura
-                    
-                    # Gerar o quadro-resumo populado
-                    df_resultado = st.session_state.ia_tabela.popular_quadro_resumo(
-                        estrutura=st.session_state.estrutura_atual,
+                    # Gerar quadro-resumo usando dados reais do Pinecone
+                    estrutura = st.session_state.ia_tabela_service._estrutura_quadro_padrao(municipio, grupo_atividade)
+                    df_resultado = st.session_state.ia_tabela_service.popular_quadro_resumo(
+                        estrutura=estrutura,
                         municipio=municipio,
                         grupo_atividade=grupo_atividade,
                         esferas=incluir_esferas,
@@ -1163,11 +1271,11 @@ def main():
                     
                     if df_resultado is not None and not df_resultado.empty:
                         st.session_state.df_resultado = df_resultado
-                        st.success("✅ Quadro-resumo gerado com sucesso!")
+                        st.success("✅ Quadro-resumo gerado com sucesso usando dados reais do Pinecone!")
                         
                         # Exibir título da tabela
                         st.subheader(f"📊 Quadro-Resumo de Legislações Ambientais - {municipio}")
-                        st.caption(f"**Atividade:** {grupo_atividade} | **Esferas:** {', '.join(incluir_esferas)} | **Total:** {len(df_resultado)} legislações")
+                        st.caption(f"**Atividade:** {grupo_atividade} | **Método:** Dados Reais Pinecone | **Total:** {len(df_resultado)} legislações")
                         
                         # Exibir tabela
                         st.dataframe(
@@ -1177,13 +1285,15 @@ def main():
                             column_config={
                                 "esfera": st.column_config.TextColumn("🏛️ Esfera", width="small"),
                                 "titulo_legislacao": st.column_config.TextColumn("📜 Título da Legislação", width="large"),
-                                "vigencia": st.column_config.TextColumn("⚖️ Vigência", width="small"),
+                                "vigencia": st.column_config.TextColumn("✅ Vigência", width="small"),
                                 "descricao_resumida": st.column_config.TextColumn("📝 Descrição Resumida", width="large"),
-                                "aplicabilidade": st.column_config.TextColumn("🎯 Aplicabilidade", width="large")
+                                "aplicabilidade": st.column_config.TextColumn("🎯 Aplicabilidade", width="large"),
+                                "fonte_dados": st.column_config.TextColumn("📊 Fonte dos Dados", width="medium")
                             }
                         )
                     else:
-                        st.error("❌ Erro ao gerar quadro-resumo com dados")
+                        st.warning(f"⚠️ Nenhuma legislação encontrada para '{grupo_atividade}' nos dados reais do Pinecone")
+                        st.info("💡 Não foram encontradas legislações relevantes para esta atividade específica nos dados indexados")
                         
                 except Exception as e:
                     st.error(f"❌ Erro ao gerar quadro-resumo: {str(e)}")
@@ -1236,8 +1346,8 @@ def main():
 
 # Rodapé
 st.markdown("---")
-st.markdown("**<i class='fas fa-robot icon'></i>IA Geradora de Tabelas** - Desenvolvido para análise de dados ambientais", unsafe_allow_html=True)
-st.markdown("<i class='fas fa-lightbulb icon'></i>**Dica:** Seja específico na descrição para melhores resultados!", unsafe_allow_html=True)
+st.markdown("**<i class='fas fa-database icon'></i>Dados Reais Pinecone** - Legislações reais indexadas e verificadas", unsafe_allow_html=True)
+st.markdown("<i class='fas fa-shield-alt icon'></i>**Vantagem:** 100% dados reais, sem informações fictícias!", unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
