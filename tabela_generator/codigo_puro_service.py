@@ -28,7 +28,7 @@ class CodigoPuroService:
         self.leis_estaduais = self._carregar_leis_estaduais()
         self.leis_federais = self._carregar_leis_federais()
         self.leis_municipais = self._carregar_leis_municipais()
-        
+
         # Palavras-chave LITERAIS por atividade (busca exata)
         self.palavras_chave = {
             "Agricultura": ["agricultura"],
