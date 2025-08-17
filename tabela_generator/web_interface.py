@@ -17,6 +17,67 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 from ia_tabela_service import IATabela
 
+# Funções de validação
+# Funções de validação
+def validar_relevancia_descricao(descricao: str) -> bool:
+    """Valida se a descrição contém termos ambientais relevantes"""
+    if not descricao or not descricao.strip():
+        return True  # Descrição vazia é permitida
+    
+    palavras_ambientais = [
+        "ambiental", "licenciamento", "meio ambiente", "sustentabilidade",
+        "poluição", "conservação", "preservação", "impacto", "gestão",
+        "recursos naturais", "biodiversidade", "ecologia", "sustentável",
+        "regularização", "estudo", "eia", "rima", "legislação", "norma"
+    ]
+    
+    palavras_atividades = [
+        "agricultura", "pecuária", "indústria", "mineração", "saneamento",
+        "energia", "transporte", "construção", "turismo", "comércio",
+        "frigorífico", "usina", "loteamento", "empreendimento", "projeto",
+        "atividade", "obra", "serviços", "produção", "processamento"
+    ]
+    
+    descricao_lower = descricao.lower()
+    return any(palavra in descricao_lower for palavra in palavras_ambientais + palavras_atividades)
+
+def validar_anti_spam(descricao: str) -> bool:
+    """Detecta padrões de spam ou texto aleatório"""
+    if not descricao or not descricao.strip():
+        return True  # Descrição vazia é permitida
+    
+    import re
+    
+    # Detectar repetições excessivas de palavras
+    palavras = descricao.lower().split()
+    if len(palavras) > 2 and len(set(palavras)) < len(palavras) * 0.5:
+        return False  # Muitas repetições
+    
+    # Detectar sequências muito longas de caracteres aleatórios
+    if re.search(r'[a-z]{15,}', descricao.lower()):
+        return False  # Sequências muito longas sem espaços
+    
+    # Detectar padrões de teclado aleatório
+    padroes_spam = [r'qwerty', r'asdfgh', r'zxcvbn', r'123456', r'abcdef']
+    for padrao in padroes_spam:
+        if re.search(padrao, descricao.lower()):
+            return False
+    
+    return True
+
+def validar_entrada_usuario(descricao: str) -> bool:
+    """Validação completa da entrada do usuário"""
+    if not descricao or not descricao.strip():
+        return True  # Descrição vazia é permitida
+    
+    # Aplicar todas as validações
+    validacoes = [
+        validar_relevancia_descricao(descricao),
+        validar_anti_spam(descricao)
+    ]
+    
+    return all(validacoes)
+
 # Configuração da página
 st.set_page_config(
     page_title="IA Leis Ambientais",
@@ -856,7 +917,7 @@ def main():
     # Header principal
     st.markdown("""
     <div class="main-header">
-        <h1><i class="fas fa-brain icon-header"></i>Plêiade Ambiental - IA Direcionada</h1>
+        <h1><i class="fas fa-brain icon-header"></i>Plêiade Ambiental - IA Geradora de Tabelas</h1>
         <h3>Sistema Inteligente de Organização de Leis Ambientais</h3>
     </div>
     """, unsafe_allow_html=True)
@@ -1216,8 +1277,39 @@ def main():
             ["Federal", "Estadual", "Municipal"],
             default=["Federal", "Estadual", "Municipal"]
         )
-        
-        limite_documentos = st.slider("📊 Máximo de legislações por esfera", 5, 1000, 10)
+
+        # Opção híbrida: Slider + Input
+        # Inicializar valor no session_state se não existir
+        if 'limite_documentos' not in st.session_state:
+            st.session_state.limite_documentos = 10
+
+        # Opção híbrida: Slider + Input com sincronização bidirecional
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            st.slider(
+                "📊 Máximo de legislações por esfera", 
+                5, 1000, 
+                value=st.session_state.limite_documentos,
+                key="slider_limite"
+            )
+        with col2:
+            st.number_input(
+                "Valor exato", 
+                value=st.session_state.limite_documentos,
+                min_value=5, 
+                max_value=1000,
+                step=1,
+                help="Digite o valor exato ou use o slider",
+                key="input_limite"
+            )
+
+        # Sincronização: atualiza session_state com o último valor alterado
+        if st.session_state.slider_limite != st.session_state.limite_documentos:
+            st.session_state.limite_documentos = st.session_state.slider_limite
+        elif st.session_state.input_limite != st.session_state.limite_documentos:
+            st.session_state.limite_documentos = st.session_state.input_limite
+
+        limite_documentos = st.session_state.limite_documentos
         st.caption("💡 Dica: Use valores altos (ex: 1000) para buscar todas as leis disponíveis")
         st.info(f"🏛️ Base: {total_leis_estaduais} leis estaduais, {total_leis_federais} federais, {total_leis_municipais} municipais disponíveis")
         
@@ -1257,6 +1349,12 @@ def main():
                     st.error(f"❌ Erro ao gerar estrutura: {str(e)}")
         
         elif btn_quadro:
+            # VALIDAÇÃO DA DESCRIÇÃO ANTES DO PROCESSAMENTO
+            if not validar_entrada_usuario(descricao):
+                st.error("❌ Descrição inválida ou irrelevante para a Legislação Ambiental. Digite novamente!")
+                st.info("🔍 **Exemplo válido:** 'Estudo ambiental para regularizar atividade de agricultura'")
+                return
+            
             with st.spinner("🔄 Gerando quadro-resumo usando dados reais do Pinecone..."):
                 try:
                     # Gerar quadro-resumo usando dados reais do Pinecone

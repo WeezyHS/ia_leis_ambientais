@@ -19,6 +19,9 @@ from dotenv import load_dotenv
 # Adicionar o diretório app ao path para importar serviços
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'app'))
 
+# Importar função de normalização de texto
+from app.services.text_normalizer import normalizar_texto
+
 # Carregar variáveis de ambiente
 load_dotenv()
 
@@ -87,7 +90,7 @@ class IATabela:
                     query_response = pinecone_index.query(
                         namespace="abnt-normas",
                         vector=[0.0] * 1536,  # Vector dummy para busca
-                        top_k=min(10, abnt_count),
+                        top_k=abnt_count, #Passa por TODOS os dados ABNT do Pinecone
                         include_metadata=True
                     )
                     
@@ -102,7 +105,7 @@ class IATabela:
                             "categoria": "Norma Técnica",
                             "jurisdicao": "Nacional",
                             "data_indexacao": metadata.get("data_indexacao", "2025-01-07"),
-                            "fonte_dados": "Pinecone - Dados Reais"
+                            #"fonte_dados": "Pinecone - Dados Reais"
                         })
                 except Exception as e:
                     print(f"⚠️ Erro ao buscar normas ABNT: {e}")
@@ -117,7 +120,7 @@ class IATabela:
                         query_response = pinecone_index.query(
                             namespace=namespace if namespace != "" else None,
                             vector=[0.0] * 1536,  # Vector dummy para busca
-                            top_k=min(50, stats.namespaces[namespace].vector_count),  # Buscar mais documentos
+                            top_k=stats.namespaces[namespace].vector_count, #Passa por TODOS os dados gerais do Pinecone
                             include_metadata=True
                         )
                         
@@ -140,7 +143,7 @@ class IATabela:
                                 "categoria": "Legislação Ambiental",
                                 "jurisdicao": jurisdicao,
                                 "data_indexacao": metadata.get("data_indexacao", "2025-01-07"),
-                                "fonte_dados": "Pinecone - Dados Reais",
+                                #"fonte_dados": "Pinecone - Dados Reais",
                                 "vigencia": "✅ Vigente"  # Assumir vigente para dados do Pinecone
                             })
                             
@@ -295,7 +298,7 @@ class IATabela:
     def _legislacoes_federais(self, grupo_atividade: str, limite: int) -> List[Dict]:
         """Retorna APENAS legislações federais REAIS do Pinecone relacionadas ao grupo de atividade"""
         
-        # 🎯 FILTRO EXPANDIDO: Palavras-chave mais abrangentes por atividade (baseado em dados reais do Pinecone)
+        # 🎯 FILTRO EXPANDIDO: Palavras-chave mais gerais e abrangentes relacionados à atividade (dados reais do Pinecone)
         palavras_chave_federais = {
             "Agricultura": ["agric", "rural", "agropec", "plantio", "cultivo", "irrigação", "atividade rural", "produtor rural", "área de preservação", "vegetação nativa"],
             "Pecuária": ["pecuár", "gado", "bovino", "suíno", "avícola", "frigorífico", "abate", "rebanho", "florestal", "pastagem", "criação de animais", "atividade rural"],
@@ -327,10 +330,13 @@ class IATabela:
                 continue
             titulo = lei.get("titulo", "")
             ementa = lei.get("ementa", "")
-            titulo_ementa = (titulo + " " + ementa).lower()
+            titulo_ementa_normalizado = normalizar_texto(titulo + " " + ementa)
+            
+            # Normalizar palavras-chave para comparação
+            palavras_normalizadas = [normalizar_texto(palavra) for palavra in palavras_atividade]
             
             # 🎯 VERIFICAÇÃO RIGOROSA: A lei deve conter pelo menos uma palavra-chave específica
-            if any(palavra in titulo_ementa for palavra in palavras_atividade):
+            if any(palavra in titulo_ementa_normalizado for palavra in palavras_normalizadas):
                 aplicabilidade = self._gerar_aplicabilidade_federal_real(lei, grupo_atividade)
                 
                 legislacao_formatada = {
@@ -339,7 +345,7 @@ class IATabela:
                     "vigencia": "✅ Vigente",
                     "descricao_resumida": ementa[:200] + "..." if len(ementa) > 200 else ementa,
                     "aplicabilidade": aplicabilidade,
-                    "fonte_dados": "Pinecone - Dados Reais"  # 🔍 TRANSPARÊNCIA DE ORIGEM
+                    #"fonte_dados": "Pinecone - Dados Reais"
                 }
                 
                 legislacoes_federais.append(legislacao_formatada)
@@ -376,7 +382,7 @@ class IATabela:
     def _legislacoes_estaduais(self, municipio: str, grupo_atividade: str, limite: int) -> List[Dict]:
         """Retorna APENAS legislações estaduais REAIS do Pinecone relacionadas ao grupo de atividade"""
         
-        # 🎯 FILTRO EXPANDIDO: Palavras-chave mais abrangentes por atividade (baseado em dados reais do Pinecone)
+        # 🎯 FILTRO EXPANDIDO: Termos mais específicos e técnicos com ênfase em aspectos ambientais (dados reais do Pinecone)
         palavras_chave_restritivas = {
             "Agricultura": ["licenciamento ambiental", "gestão ambiental", "sustentabilidade ambiental", "zoneamento ambiental", "passivo ambiental", "impactos ambientais", "gestão de resíduos sólidos", "resíduos perigosos", "compostagem", "aterro sanitário", "reciclagem", "reutilização", "poluição difusa", "contaminação do solo", "recursos hídricos", "bacia hidrográfica", "outorga de uso da água", "índice de qualidade da água", "eutrofização", "tratamento de efluentes", "esgotamento sanitário", "água subterrânea", "emissões atmosféricas", "material particulado", "biodiversidade", "fragmentação de habitats", "corredores ecológicos", "plano de gerenciamento de resíduos sólidos", "inventário florestal"],
             "Pecuária": ["pecuár", "gado", "bovino", "suíno", "avícola", "frigorífico", "abate", "rebanho", "pastagem", "criação de animais", "atividade rural", "ambiental", "meio ambiente", "recursos", "licenciamento"],
@@ -406,17 +412,20 @@ class IATabela:
             jurisdicao = lei.get("jurisdicao", "").lower()
             if "estadual" not in jurisdicao:
                 continue
-            titulo_desc = (lei.get("titulo", "") + " " + lei.get("descricao", "")).lower()
+            titulo_desc_normalizado = normalizar_texto(lei.get("titulo", "") + " " + lei.get("descricao", ""))
+            
+            # Normalizar palavras-chave para comparação
+            palavras_normalizadas = [normalizar_texto(palavra) for palavra in palavras_atividade]
             
             # 🎯 VERIFICAÇÃO RIGOROSA: A lei deve conter pelo menos uma palavra-chave específica
-            if any(palavra in titulo_desc for palavra in palavras_atividade):
+            if any(palavra in titulo_desc_normalizado for palavra in palavras_normalizadas):
                 legislacoes_estaduais.append({
                     "esfera": "Estadual",
                     "titulo_legislacao": lei.get("titulo", "Lei Estadual"),
                     "vigencia": "✅ Vigente",
                     "descricao_resumida": lei.get("descricao", "")[:150] + "..." if len(lei.get("descricao", "")) > 150 else lei.get("descricao", ""),
                     "aplicabilidade": f"Aplicável especificamente a atividades de {grupo_atividade.lower()} no estado do Tocantins",
-                    "fonte_dados": "Pinecone - Dados Reais"  # 🔍 TRANSPARÊNCIA DE ORIGEM
+                    #"fonte_dados": "Pinecone - Dados Reais"
                 })
         
         # ✅ Usando apenas dados reais carregados do Pinecone
@@ -435,9 +444,9 @@ class IATabela:
     def _legislacoes_municipais(self, municipio: str, grupo_atividade: str, limite: int) -> List[Dict]:
         """Retorna APENAS legislações municipais REAIS do Pinecone relacionadas ao grupo de atividade"""
         
-        # 🎯 FILTRO EXPANDIDO: Palavras-chave mais abrangentes por atividade (baseado em dados reais do Pinecone)
+        # 🎯 FILTRO EXPANDIDO: Termos locais e urbanos com ênfase em planejamento municipal (dados reais do Pinecone)
         palavras_chave_municipais = {
-            "Agricultura": ["licenciamento ambiental", "gestão ambiental", "sustentabilidade ambiental", "zoneamento ambiental", "passivo ambiental", "impactos ambientais", "gestão de resíduos sólidos", "resíduos perigosos", "compostagem", "aterro sanitário", "reciclagem", "reutilização", "poluição difusa", "contaminação do solo", "recursos hídricos", "bacia hidrográfica", "outorga de uso da água", "índice de qualidade da água", "eutrofização", "tratamento de efluentes", "esgotamento sanitário", "água subterrânea", "emissões atmosféricas", "material particulado", "biodiversidade", "fragmentação de habitats", "corredores ecológicos", "plano de gerenciamento de resíduos sólidos", "inventário florestal"],
+            "Agricultura": ["agricultura", "agropecuária", "agronegócio", "atividade agrícola", "cultivo", "lavoura", "plantio", "colheita", "produção agrícola", "produção rural", "produção de grãos", "produção vegetal", "roça", "safra", "agricultura familiar", "agricultura orgânica", "agricultura sustentável", "agricultura regenerativa", "agricultura de precisão", "agricultura irrigada", "monocultura", "policultura", "irrigação", "adubação", "fertilização", "preparo do solo", "rotação de culturas", "manejo agrícola", "mecanização agrícola", "trator", "colheitadeira", "plantadeira", "semeadura", "pecuária", "agroindústria", "produção animal", "integração lavoura-pecuária", "impactos ambientais", "gestão de resíduos sólidos", "resíduos perigosos", "compostagem", "poluição difusa", "contaminação do solo", "recursos hídricos", "bacia hidrográfica", "outorga de uso da água", "índice de qualidade da água", "eutrofização", "tratamento de efluentes", "esgotamento sanitário", "água subterrânea", "emissões atmosféricas", "material particulado", "biodiversidade", "fragmentação de habitats", "corredores ecológicos", "plano de gerenciamento de resíduos sólidos"],
             "Pecuária": ["pecuár", "gado", "bovino", "suíno", "avícola", "sanitário", "plano diretor", "pastagem", "criação de animais", "atividade rural", "ambiental", "meio ambiente", "recursos", "licenciamento"],
             "Indústria": ["industr", "fábrica", "manufatur", "zoneamento industrial", "obras", "plano diretor", "emissão", "efluente", "ambiental", "meio ambiente", "licenciamento"],
             "Mineração": ["miner", "lavra", "garimpo", "extração", "plano diretor", "degradação", "recuperação", "ambiental", "meio ambiente", "licenciamento"],
@@ -465,17 +474,20 @@ class IATabela:
             jurisdicao = lei.get("jurisdicao", "").lower()
             if "municipal" not in jurisdicao:
                 continue
-            titulo_desc = (lei.get("titulo", "") + " " + lei.get("descricao", "")).lower()
+            titulo_desc_normalizado = normalizar_texto(lei.get("titulo", "") + " " + lei.get("descricao", ""))
+            
+            # Normalizar palavras-chave para comparação
+            palavras_normalizadas = [normalizar_texto(palavra) for palavra in palavras_atividade]
             
             # 🎯 VERIFICAÇÃO RIGOROSA: A lei deve conter palavra-chave específica
-            if any(palavra in titulo_desc for palavra in palavras_atividade):
+            if any(palavra in titulo_desc_normalizado for palavra in palavras_normalizadas):
                 legislacoes_municipais.append({
                     "esfera": "Municipal",
                     "titulo_legislacao": lei.get("titulo", "Lei Municipal"),
                     "vigencia": "✅ Vigente",
                     "descricao_resumida": lei.get("descricao", "")[:150] + "..." if len(lei.get("descricao", "")) > 150 else lei.get("descricao", ""),
                     "aplicabilidade": f"Aplicável especificamente a atividades de {grupo_atividade.lower()} no município de {municipio}",
-                    "fonte_dados": "Pinecone - Dados Reais"  # 🔍 TRANSPARÊNCIA DE ORIGEM
+                    #"fonte_dados": "Pinecone - Dados Reais"
                 })
         
         # ✅ Aguardando indexação de dados municipais reais no Pinecone
