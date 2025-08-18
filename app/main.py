@@ -1,75 +1,113 @@
-from fastapi import FastAPI
+# --- Importações ---
+from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import JSONResponse
 from app.routes import query, importar, consulta, multi_sources, coema, auth
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
+from pathlib import Path
+import os
+from dotenv import load_dotenv
+from supabase import create_client, Client
+import openai
+
+from typing import List, Optional
+from uuid import UUID
+
+load_dotenv()
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
+
+class Message(BaseModel):
+    role: str
+    content: str
+
+class ChatRequest(BaseModel):
+    history: List[Message]
+    conversation_id: Optional[UUID] = None # O ID é opcional
 
 app = FastAPI(
-    title="API Leis Ambientais", 
-    description="Sistema de consulta a leis ambientais com múltiplas fontes de dados",
-    timeout=120
+    title="API Leis Ambientais",
+    description="Sistema de consulta a leis ambientais com múltiplas fontes de dados"
 )
 
-# Adicione após criar a instância do FastAPI
+BASE_DIR = Path(__file__).resolve().parent.parent
+templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+
+supabase_url: str = os.environ.get("SUPABASE_URL")
+supabase_key: str = os.environ.get("SUPABASE_KEY")
+supabase: Client = create_client(supabase_url, supabase_key)
+
+openai.api_key = os.environ.get("OPENAI_API_KEY")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8000", "http://127.0.0.1:8000"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Servir arquivos estáticos
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 
-# Servir arquivos do WeWeb
-app.mount("/assets", StaticFiles(directory="static/weweb/assets"), name="weweb_assets")
-app.mount("/fonts", StaticFiles(directory="static/weweb/fonts"), name="weweb_fonts")
-app.mount("/data", StaticFiles(directory="static/weweb/data"), name="weweb_data")
-app.mount("/icons", StaticFiles(directory="static/weweb/icons"), name="weweb_icons")
-app.mount("/images", StaticFiles(directory="static/weweb/images"), name="weweb_images")
-
-# Rota para servir o index.html do WeWeb na raiz
 @app.get("/")
-async def serve_weweb_index():
-    return FileResponse("static/weweb/index.html")
+async def serve_login_page(request: Request):
+    return templates.TemplateResponse("login.html", {"request": request})
 
-# Rota para servir arquivos específicos do WeWeb
-@app.get("/manifest.json")
-async def serve_manifest():
-    return FileResponse("static/weweb/manifest.json")
-
-@app.get("/serviceworker.js")
-async def serve_serviceworker():
-    return FileResponse("static/weweb/serviceworker.js")
-
-@app.get("/robots.txt")
-async def serve_robots():
-    return FileResponse("static/weweb/robots.txt")
-
-@app.get("/sitemap.xml")
-async def serve_sitemap():
-    return FileResponse("static/weweb/sitemap.xml")
-
-@app.get("/favicon.ico")
-async def serve_favicon():
-    return FileResponse("static/weweb/favicon.ico")
-
-# Rota para a página chat-ai do WeWeb
 @app.get("/chat-ai")
-async def serve_chat_ai():
-    return FileResponse("static/weweb/index.html")
+async def serve_chat_page(request: Request):
+    return templates.TemplateResponse("IA_chat.html", {"request": request})
 
-# Incluir outros routers
-# Registrar rotas
-app.include_router(auth.router)
-app.include_router(query.router)
-app.include_router(importar.router)
-app.include_router(consulta.router)
-app.include_router(multi_sources.router)
-app.include_router(coema.router)
+@app.post("/login")
+async def handle_login(user_login: UserLogin):
+    try:
+        session = supabase.auth.sign_in_with_password({"email": user_login.email, "password": user_login.password})
+        return JSONResponse(status_code=200, content={"message": "Login realizado com sucesso!", "user_id": session.user.id})
+    except Exception as e:
+        return JSONResponse(status_code=401, content={"message": "Email ou senha incorretos."})
 
-# Criar tabelas do banco de dados
-from app.database import create_tables
-create_tables()
+@app.post("/ask-ia")
+async def ask_ia(chat_request: ChatRequest):
+    conversation_history = [message.dict() for message in chat_request.history]
+    user_message = conversation_history[-1]['content']
+    conversation_id = chat_request.conversation_id
+
+    test_user_id = "ca9520b0-2cd7-4e6f-b8d2-8b6e805188b7"
+
+    #print(f"Histórico recebido: {conversation_history}")
+    try:
+        if conversation_id is None:
+            new_conv_data = supabase.table("conversations").insert({
+                "user_id": test_user_id,
+                "title": user_message[:50]
+            }).execute()
+            conversation_id = new_conv_data.data[0]['id']
+
+        completion = openai.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=conversation_history
+        )
+        ai_response = completion.choices[0].message.content
+
+        supabase.table("messages").insert([
+            {"conversation_id": conversation_id, "role": "user", "content": user_message},
+            {"conversation_id": conversation_id, "role": "assistant", "content": ai_response}
+        ]).execute()
+
+        return JSONResponse(
+            status_code=200,
+            content={"response": ai_response, "conversation_id": str(conversation_id)} # <-- MUDANÇA AQUI
+        )
+    except Exception as e:
+        print(f"Erro na API da OpenAI: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"response": "Desculpe, ocorreu um erro ao comunicar com a IA."}
+        )
+
+if __name__ == "__main__":
+    uvicorn.run("app.main:app", host="127.0.0.1", port=8000, reload=True)
