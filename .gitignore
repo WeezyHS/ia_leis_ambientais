@@ -67,7 +67,6 @@ Thumbs.db
 
 # Resultados de scraping temporários
 resultados/
-*.html
 
 # Arquivos JSON grandes de dados temporários
 *_results_*.json
