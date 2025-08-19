@@ -72,27 +72,36 @@ async def handle_login(user_login: UserLogin):
 
 @app.post("/ask-ia")
 async def ask_ia(chat_request: ChatRequest):
+    # 1) Converte o histórico em dicts simples
     conversation_history = [message.dict() for message in chat_request.history]
     user_message = conversation_history[-1]['content']
-    conversation_id = chat_request.conversation_id
+
+    # 2) Converte conversation_id vindo do request para string (se existir)
+    conversation_id = None
+    if chat_request.conversation_id is not None:
+        # chat_request.conversation_id é UUID por causa do Pydantic
+        conversation_id = str(chat_request.conversation_id)
 
     test_user_id = "ca9520b0-2cd7-4e6f-b8d2-8b6e805188b7"
 
-    #print(f"Histórico recebido: {conversation_history}")
     try:
+        # 3) Se não veio id, cria a conversa e já padroniza para string
         if conversation_id is None:
-            new_conv_data = supabase.table("conversations").insert({
+            new_conv = supabase.table("conversations").insert({
                 "user_id": test_user_id,
                 "title": user_message[:50]
             }).execute()
-            conversation_id = new_conv_data.data[0]['id']
+            conv_id = new_conv.data[0]["id"]
+            conversation_id = str(conv_id)  # <- padroniza AQUI
 
+        # 4) Chama a OpenAI normalmente (histórico só tem role/content)
         completion = openai.chat.completions.create(
             model="gpt-4o-mini",
             messages=conversation_history
         )
         ai_response = completion.choices[0].message.content
 
+        # 5) Ao salvar mensagens no Supabase, use SEMPRE string no conversation_id
         supabase.table("messages").insert([
             {"conversation_id": conversation_id, "role": "user", "content": user_message},
             {"conversation_id": conversation_id, "role": "assistant", "content": ai_response}
@@ -100,10 +109,12 @@ async def ask_ia(chat_request: ChatRequest):
 
         return JSONResponse(
             status_code=200,
-            content={"response": ai_response, "conversation_id": str(conversation_id)} # <-- MUDANÇA AQUI
+            content={"response": ai_response, "conversation_id": conversation_id}
         )
+
     except Exception as e:
-        print(f"Erro na API da OpenAI: {e}")
+        # Esse erro pode vir tanto da OpenAI quanto do Supabase (serialização)
+        print(f"Erro no processamento do chat: {e}")
         return JSONResponse(
             status_code=500,
             content={"response": "Desculpe, ocorreu um erro ao comunicar com a IA."}
