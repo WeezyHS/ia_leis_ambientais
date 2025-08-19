@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat IA - Plêiade Ambiental</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+    <div class="chat-wrapper">
+        <aside class="sidebar">
+            <div class="sidebar-content">
+                <button class="new-chat-btn">
+                    Novo Chat
+                </button>
+                <div class="chat-history">
+                    <h3>Histórico</h3>
+                    <ul>
+                        <li><a href="#">Ajuda com programação</a></li>
+                        <li><a href="#">Ideias para projeto</a></li>
+                    </ul>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <nav class="navbar">
+                <h1>Plêiade Ambiental IA</h1>
+            </nav>
+
+            <div id="chat-messages" class="chat-messages-area">
+                <div class="message assistant">
+                    <div class="avatar">🤖</div>
+                    <div class="text">Olá! Como posso ajudar você hoje?</div>
+                </div>
+            </div>
+
+            <div class="chat-input-area">
+                <form id="message-form" class="message-form">
+                    <textarea id="message-input" placeholder="Digite uma mensagem..." rows="1"></textarea>
+                    <button type="submit" id="send-button">
+                        Enviar
+                    </button>
+                </form>
+            </div>
+        </main>
+    </div>
+    <script src="/static/js/chat.js"></script>
+    </body>
+</html>
