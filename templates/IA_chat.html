@@ -8,33 +8,25 @@
 </head>
 <body>
 
-    <div class="chat-wrapper">
-        <aside class="sidebar">
+    <div class="chat-wrapper" id="chat-layout">
+        <aside class="sidebar" id="chat-sidebar">
             <div class="sidebar-content">
                 <button class="new-chat-btn">
                     Novo Chat
                 </button>
+
                 <div class="chat-history">
                     <h3>Histórico</h3>
-                    <ul>
-                        <li><a href="#">Ajuda com programação</a></li>
-                        <li><a href="#">Ideias para projeto</a></li>
-                    </ul>
+                    <!-- Lista dinâmica de conversas (preenchida pelo chat.js) -->
+                    <ul id="chat-list"></ul>
                 </div>
             </div>
         </aside>
 
-        <main class="main-content">
+        <main class="main-content" id="chat-container">
             <nav class="navbar">
                 <h1>Plêiade Ambiental IA</h1>
             </nav>
-
-            <div id="chat-messages" class="chat-messages-area">
-                <div class="message assistant">
-                    <div class="avatar">🤖</div>
-                    <div class="text">Olá! Como posso ajudar você hoje?</div>
-                </div>
-            </div>
 
             <div class="chat-input-area">
                 <form id="message-form" class="message-form">
@@ -47,5 +39,5 @@
         </main>
     </div>
     <script src="/static/js/chat.js"></script>
-    </body>
+</body>
 </html>
