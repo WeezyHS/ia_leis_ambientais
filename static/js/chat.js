@@ -51,9 +51,64 @@ document.addEventListener('DOMContentLoaded', () => {
       const a  = document.createElement('a');
       a.href = '#';
       a.textContent = title || 'Novo chat';
+      
+      // Criar ícone de lixeira
+      const deleteIcon = document.createElement('span');
+      deleteIcon.className = 'delete-chat-icon';
+      deleteIcon.innerHTML = '🗑️';
+      deleteIcon.title = 'Excluir chat';
+      
+      // Adicionar evento de clique no ícone para excluir chat
+      deleteIcon.addEventListener('click', async (e) => {
+        e.stopPropagation(); // Evita que o clique ative o chat
+        e.preventDefault();
+        
+        // Confirmar exclusão
+        if (!confirm('Tem certeza que deseja excluir este chat? Esta ação não pode ser desfeita.')) {
+          return;
+        }
+        
+        const conv = conversations.get(key);
+        if (!conv || !li.dataset.id) {
+          // Se não tem ID do backend, apenas remove da memória e UI
+          conversations.delete(key);
+          li.remove();
+          if (currentConversationKey === key) {
+            currentConversationKey = null;
+            clearMessagesUI();
+          }
+          return;
+        }
+        
+        try {
+          // Chama o endpoint DELETE
+          const response = await fetch(`/chat/${li.dataset.id}`, {
+            method: 'DELETE'
+          });
+          
+          if (response.ok) {
+            // Remove da memória e da UI
+            conversations.delete(key);
+            li.remove();
+            
+            // Se era o chat ativo, limpa a área de mensagens
+            if (currentConversationKey === key) {
+              currentConversationKey = null;
+              clearMessagesUI();
+            }
+          } else {
+            alert('Erro ao excluir chat. Tente novamente.');
+          }
+        } catch (error) {
+          console.error('Erro ao excluir chat:', error);
+          alert('Erro ao excluir chat. Tente novamente.');
+        }
+      });
+      
       li.appendChild(a);
-  
-      // Atribuímos o identificador “chave corrente” ao <li>
+      li.appendChild(deleteIcon);
+
+      // Atribuímos o identificador "chave corrente" ao <li>
       // data-key: chave local (temp ou definitiva)
       // data-id:  id do backend (UUID), quando existir
       li.dataset.key = key;
@@ -185,7 +240,15 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   
     messageForm.addEventListener('submit', handleSendMessage);
-  
+
+    // Adiciona evento para enviar mensagem com Enter
+    messageInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        handleSendMessage(event);
+      }
+    });
+
     // Inicia com um chat vazio (estilo ChatGPT)
     startNewChat();
   });
