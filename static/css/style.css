@@ -254,6 +254,7 @@ html, body {
   cursor: pointer;
   transition: background .2s;
 }
+
 .new-chat-btn:hover{ background: rgba(255,255,255,.08); }
 
 .chat-history h3{
