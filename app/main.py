@@ -1,5 +1,5 @@
 # --- Importações ---
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Body
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 from app.routes import query, importar, consulta, multi_sources, coema, auth
@@ -103,6 +103,25 @@ async def handle_login(user_login: UserLogin):
         return JSONResponse(status_code=200, content={"message": "Login realizado com sucesso!", "user_id": session.user.id})
     except Exception as e:
         return JSONResponse(status_code=401, content={"message": "Email ou senha incorretos."})
+
+@app.patch("/chat/{conversation_id}")
+async def update_chat_title(conversation_id: str, data: dict = Body(...)):
+    new_title = data.get("title")
+    if not new_title:
+        return JSONResponse(status_code=400, content={"message": "Título não fornecido"})
+
+    try:
+        supabase \
+            .table("conversations") \
+            .update({"title": new_title}) \
+            .eq("id", conversation_id) \
+            .execute()
+        
+        return JSONResponse(status_code=200, content={"message": "Título atualizado com sucesso"})
+    
+    except Exception as e:
+        print(f"Erro ao atualizar título: {e}")
+        return JSONResponse(status_code=500, content={"message": "Erro ao atualizar título"})
 
 @app.delete("/chat/{conversation_id}")
 async def delete_chat(conversation_id: str):
