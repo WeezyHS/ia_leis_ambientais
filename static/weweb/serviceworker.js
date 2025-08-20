@@ -13,5 +13,13 @@ self.addEventListener('fetch', event => {
         return;
     }
 
+    // Permitir redirecionamentos para rotas de autenticação e dashboard
+    const url = new URL(event.request.url);
+    const authRoutes = ['/dashboard', '/login', '/api/auth'];
+    
+    if (authRoutes.some(route => url.pathname.startsWith(route))) {
+        return; // Não interceptar essas rotas
+    }
+
     event.respondWith(fetch(event.request));
 });
