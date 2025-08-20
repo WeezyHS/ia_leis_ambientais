@@ -124,14 +124,20 @@ document.addEventListener('DOMContentLoaded', () => {
         currentConversationKey = clickedKey;
         setActiveListItem(li);
   
-        // Se você tiver endpoint para buscar histórico no backend,
-        // descomente e ajuste:
-        //
-        // if (li.dataset.id) {
-        //   const resp = await fetch(`/conversations/${li.dataset.id}`);
-        //   const data = await resp.json();
-        //   conv.messages = data.messages; // [{role, content}, ...]
-        // }
+        // Se o chat tem ID do backend e ainda não carregou as mensagens, busca do servidor
+        if (li.dataset.id && conv.messages.length === 0) {
+          try {
+            const resp = await fetch(`/chat/${li.dataset.id}/messages`);
+            if (resp.ok) {
+              const data = await resp.json();
+              conv.messages = data; // [{role, content}, ...]
+            } else {
+              console.error('Erro ao carregar mensagens:', resp.status);
+            }
+          } catch (error) {
+            console.error('Erro ao carregar mensagens:', error);
+          }
+        }
 
         renderMessages(conv.messages);
       });
@@ -249,7 +255,50 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // Inicia com um chat vazio (estilo ChatGPT)
-    startNewChat();
+    // Função para carregar chats existentes do backend
+    const loadUserChats = async () => {
+      try {
+        const response = await fetch('/user-chats');
+        if (!response.ok) {
+          console.error('Erro ao carregar chats:', response.status);
+          startNewChat(); // Fallback: cria novo chat se falhar
+          return;
+        }
+
+        const chats = await response.json();
+        
+        if (chats.length === 0) {
+          // Se não há chats, cria um novo
+          startNewChat();
+          return;
+        }
+
+        // Popula o Map de conversas e cria os itens da lista
+        chats.forEach(chat => {
+          const chatKey = chat.id; // Usa o ID do backend como chave
+          
+          // Adiciona ao Map de conversas
+          conversations.set(chatKey, {
+            id: chat.id,
+            title: chat.title || 'Chat sem título',
+            messages: [] // Mensagens serão carregadas quando o chat for clicado
+          });
+          
+          // Cria item na lista
+          createListItem(chat.title || 'Chat sem título', chatKey, chat.id);
+        });
+        
+        // Se há chats, não seleciona nenhum inicialmente (deixa área limpa)
+        currentConversationKey = null;
+        clearMessagesUI();
+        
+      } catch (error) {
+        console.error('Erro ao carregar chats:', error);
+        startNewChat(); // Fallback: cria novo chat se falhar
+      }
+    };
+
+    // Carrega chats existentes em vez de criar novo automaticamente
+    loadUserChats();
   });
   
