@@ -48,10 +48,61 @@ document.addEventListener('DOMContentLoaded', () => {
   
     const createListItem = (title, key, backendId = null) => {
       const li = document.createElement('li');
-      const a  = document.createElement('a');
+      const titleSpan = document.createElement('span');
+      titleSpan.textContent = title || 'Novo chat';
+      titleSpan.className = 'chat-title';
+
+      const editIcon = document.createElement('span');
+      editIcon.innerHTML = '✏️';
+      editIcon.className = 'edit-chat-icon';
+      editIcon.title = 'Editar nome';
+
+      const a = document.createElement('a');
       a.href = '#';
-      a.textContent = title || 'Novo chat';
+      a.appendChild(titleSpan);
+      a.appendChild(editIcon);
+
+      editIcon.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
       
+        // Torna o título editável
+        titleSpan.contentEditable = true;
+        titleSpan.focus();
+      
+        // Estilo temporário visual
+        titleSpan.classList.add('editable-title');
+      });
+
+      titleSpan.addEventListener('blur', async () => {
+        const newTitle = titleSpan.textContent.trim();
+        if (!newTitle) return;
+      
+        const key = li.dataset.key;
+        const conv = conversations.get(key);
+        if (conv) conv.title = newTitle;
+      
+        if (li.dataset.id) {
+          try {
+            await fetch(`/chat/${li.dataset.id}`, {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ title: newTitle })
+            });
+          } catch (err) {
+            console.error('Erro ao atualizar título:', err);
+          }
+        }
+      
+        // Remove estilo de edição
+        titleSpan.contentEditable = false;
+        titleSpan.classList.remove('editable-title');
+      });
+
+      a.href = '#';
+
       // Criar ícone de lixeira
       const deleteIcon = document.createElement('span');
       deleteIcon.className = 'delete-chat-icon';
