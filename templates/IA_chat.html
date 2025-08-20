@@ -20,6 +20,9 @@
                     <!-- Lista dinâmica de conversas (preenchida pelo chat.js) -->
                     <ul id="chat-list"></ul>
                 </div>
+                <div>
+                    <button id="btn-voltar-dashboard" class="voltar-dashboard-btn">⬅️ Voltar</button>
+                </div>
             </div>
         </aside>
 
@@ -41,5 +44,10 @@
         </main>
     </div>
     <script src="/static/js/chat.js"></script>
+    <script>
+        document.getElementById('btn-voltar-dashboard').addEventListener('click', () => {
+          window.location.replace('/dashboard'); // impede que o usuário volte para o chat
+        });
+    </script>      
 </body>
 </html>
