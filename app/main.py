@@ -54,6 +54,40 @@ app.add_middleware(
 
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 
+@app.get("/user-chats")
+async def get_user_chats():
+    test_user_id = "ca9520b0-2cd7-4e6f-b8d2-8b6e805188b7"  # Simulado para dev/teste
+
+    try:
+        response = supabase \
+            .table("conversations") \
+            .select("*") \
+            .eq("user_id", test_user_id) \
+            .order("created_at", desc=True) \
+            .execute()
+
+        return JSONResponse(content=response.data)
+
+    except Exception as e:
+        print(f"Erro ao buscar chats: {e}")
+        return JSONResponse(status_code=500, content={"message": "Erro ao buscar conversas."})
+
+@app.get("/chat/{conversation_id}/messages")
+async def get_chat_messages(conversation_id: str):
+    try:
+        response = supabase \
+            .table("messages") \
+            .select("role, content") \
+            .eq("conversation_id", conversation_id) \
+            .order("created_at", desc=False) \
+            .execute()
+
+        return JSONResponse(content=response.data)
+
+    except Exception as e:
+        print(f"Erro ao buscar mensagens: {e}")
+        return JSONResponse(status_code=500, content={"message": "Erro ao buscar mensagens."})
+
 @app.get("/")
 async def serve_login_page(request: Request):
     return templates.TemplateResponse("login.html", {"request": request})
