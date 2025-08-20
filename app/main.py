@@ -54,6 +54,10 @@ app.add_middleware(
 
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 
+@app.get("/dashboard")
+async def serve_dashboard(request: Request):
+    return templates.TemplateResponse("dashboard.html", {"request": request})
+
 @app.get("/user-chats")
 async def get_user_chats():
     test_user_id = "ca9520b0-2cd7-4e6f-b8d2-8b6e805188b7"  # Simulado para dev/teste
