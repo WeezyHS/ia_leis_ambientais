@@ -132,10 +132,10 @@ document.addEventListener('DOMContentLoaded', () => {
         //   const data = await resp.json();
         //   conv.messages = data.messages; // [{role, content}, ...]
         // }
-  
+
         renderMessages(conv.messages);
       });
-  
+
       chatList.prepend(li); // novo chat vai para o topo
       setActiveListItem(li);
       return li;
