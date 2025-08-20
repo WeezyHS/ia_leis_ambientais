@@ -70,6 +70,26 @@ async def handle_login(user_login: UserLogin):
     except Exception as e:
         return JSONResponse(status_code=401, content={"message": "Email ou senha incorretos."})
 
+@app.delete("/chat/{conversation_id}")
+async def delete_chat(conversation_id: str):
+    try:
+        # Primeiro exclui todas as mensagens da conversa
+        supabase.table("messages").delete().eq("conversation_id", conversation_id).execute()
+        
+        # Depois exclui a conversa
+        supabase.table("conversations").delete().eq("id", conversation_id).execute()
+        
+        return JSONResponse(
+            status_code=200,
+            content={"message": "Chat excluído com sucesso"}
+        )
+    except Exception as e:
+        print(f"Erro ao excluir chat: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"message": "Erro ao excluir chat"}
+        )
+
 @app.post("/ask-ia")
 async def ask_ia(chat_request: ChatRequest):
     # 1) Converte o histórico em dicts simples
