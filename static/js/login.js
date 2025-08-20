@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 // LOGIN BEM-SUCEDIDO!
                 // Agora, redirecionamos o usuário para a página de chat
-                window.location.href = "/chat-ai";
+                window.location.href = "/dashboard";
             }
 
         } catch (error) {
