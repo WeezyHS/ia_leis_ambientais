@@ -272,40 +272,44 @@ html, body {
 
 .chat-history li{
   position: relative;
-  display: flex;
-  align-items: center;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 .chat-history li a{
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 8px 10px;
   border-radius: 8px;
   color: var(--text);
   text-decoration: none;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   transition: background .15s;
-  flex: 1;
 }
 .chat-history li a:hover{ background: rgba(255,255,255,.08); }
 .chat-history li.active a{ background: rgba(255,255,255,.12); }
 
+/* Container para ícones de ação */
+.chat-actions-container {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.chat-history li:hover .chat-actions-container {
+  opacity: 1;
+}
+
 /* Ícone de exclusão */
 .delete-chat-icon {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
   cursor: pointer;
   padding: 4px;
   border-radius: 4px;
-  opacity: 0;
-  transition: opacity 0.2s, background 0.2s;
+  transition: background 0.2s;
   font-size: 14px;
-  z-index: 10;
-}
-
-.chat-history li:hover .delete-chat-icon {
-  opacity: 1;
 }
 
 .delete-chat-icon:hover {
@@ -314,9 +318,8 @@ html, body {
 
 /*Função de editar nome do chat*/
 .chat-title {
-  display: inline-block;
-  margin-right: 6px;
-  max-width: 160px;
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -325,11 +328,13 @@ html, body {
 .edit-chat-icon {
   cursor: pointer;
   font-size: 14px;
-  opacity: 0.7;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background 0.2s;
 }
 
 .edit-chat-icon:hover {
-  opacity: 1;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .editable-title:focus {

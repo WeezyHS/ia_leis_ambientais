@@ -57,10 +57,23 @@ document.addEventListener('DOMContentLoaded', () => {
       editIcon.className = 'edit-chat-icon';
       editIcon.title = 'Editar nome';
 
+      // Criar ícone de lixeira
+      const deleteIcon = document.createElement('span');
+      deleteIcon.className = 'delete-chat-icon';
+      deleteIcon.innerHTML = '🗑️';
+      deleteIcon.title = 'Excluir chat';
+
       const a = document.createElement('a');
       a.href = '#';
       a.appendChild(titleSpan);
-      a.appendChild(editIcon);
+      
+      // Criar container para os ícones de ação
+      const actionsContainer = document.createElement('div');
+      actionsContainer.className = 'chat-actions-container';
+      actionsContainer.appendChild(editIcon);
+      actionsContainer.appendChild(deleteIcon);
+      
+      a.appendChild(actionsContainer);
 
       editIcon.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -101,14 +114,6 @@ document.addEventListener('DOMContentLoaded', () => {
         titleSpan.classList.remove('editable-title');
       });
 
-      a.href = '#';
-
-      // Criar ícone de lixeira
-      const deleteIcon = document.createElement('span');
-      deleteIcon.className = 'delete-chat-icon';
-      deleteIcon.innerHTML = '🗑️';
-      deleteIcon.title = 'Excluir chat';
-      
       // Adicionar evento de clique no ícone para excluir chat
       deleteIcon.addEventListener('click', async (e) => {
         e.stopPropagation(); // Evita que o clique ative o chat
@@ -157,7 +162,6 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       
       li.appendChild(a);
-      li.appendChild(deleteIcon);
 
       // Atribuímos o identificador "chave corrente" ao <li>
       // data-key: chave local (temp ou definitiva)
