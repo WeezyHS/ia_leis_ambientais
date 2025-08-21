@@ -87,7 +87,7 @@ st.set_page_config(
     menu_items={
         'Get Help': None,
         'Report a bug': None,
-        'About': None
+        'About': 'IA Leis Ambientais - Gerador de Tabelas'
     }
 )
 
@@ -1287,7 +1287,7 @@ def main():
         col1, col2 = st.columns([3, 1])
         with col1:
             st.slider(
-                "📊 Máximo de legislações por esfera", 
+                "📊 Máximo de legislações por esfera",
                 5, 1000, 
                 value=st.session_state.limite_documentos,
                 key="slider_limite"
