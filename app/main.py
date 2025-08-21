@@ -100,6 +100,11 @@ async def serve_login_page(request: Request):
 async def serve_chat_page(request: Request):
     return templates.TemplateResponse("IA_chat.html", {"request": request})
 
+@app.get("/gerador-tabelas")
+async def serve_gerador_tabelas(request: Request):
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url="http://localhost:8501", status_code=302)
+
 @app.post("/login")
 async def handle_login(user_login: UserLogin):
     try:
