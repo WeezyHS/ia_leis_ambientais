@@ -1,7 +1,7 @@
 # --- Importações ---
 from fastapi import FastAPI, Request, Body
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from app.routes import query, importar, consulta, multi_sources, coema, auth
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
@@ -53,6 +53,7 @@ app.add_middleware(
 )
 
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
+app.mount("/teste-static", StaticFiles(directory="TESTE_chat_o3_e_o3-mini_Rogerio"), name="teste-static")
 
 @app.get("/dashboard")
 async def serve_dashboard(request: Request):
@@ -99,6 +100,16 @@ async def serve_login_page(request: Request):
 @app.get("/chat-ai")
 async def serve_chat_page(request: Request):
     return templates.TemplateResponse("IA_chat.html", {"request": request})
+
+@app.get("/teste-o3")
+async def teste_o3(request: Request):
+    """Página de teste para modelo o3"""
+    return FileResponse("TESTE_chat_o3_e_o3-mini_Rogerio/chat_o3.html")
+
+@app.get("/teste-o3-mini")
+async def teste_o3_mini(request: Request):
+    """Página de teste para modelo o3-mini"""
+    return FileResponse("TESTE_chat_o3_e_o3-mini_Rogerio/chat_o3-mini.html")
 
 @app.get("/gerador-tabelas")
 async def serve_gerador_tabelas(request: Request):
@@ -202,5 +213,57 @@ async def ask_ia(chat_request: ChatRequest):
             content={"response": "Desculpe, ocorreu um erro ao comunicar com a IA."}
         )
 
+@app.post("/ask-ia-o3")
+async def ask_ia_o3(chat_request: ChatRequest):
+    """Endpoint para testar modelo o3"""
+    conversation_history = [message.dict() for message in chat_request.history]
+    user_message = conversation_history[-1]['content']
+
+    try:
+        # Chama a OpenAI com modelo o3 (sem salvar no banco - apenas teste)
+        completion = openai.chat.completions.create(
+            model="o3",
+            messages=conversation_history
+        )
+        ai_response = completion.choices[0].message.content
+
+        return JSONResponse(
+            status_code=200,
+            content={"response": ai_response, "conversation_id": None}
+        )
+
+    except Exception as e:
+        print(f"Erro no processamento do chat o3: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"response": "Desculpe, ocorreu um erro ao comunicar com o modelo o3."}
+        )
+
+@app.post("/ask-ia-o3-mini")
+async def ask_ia_o3_mini(chat_request: ChatRequest):
+    """Endpoint para testar modelo o3-mini"""
+    conversation_history = [message.dict() for message in chat_request.history]
+    user_message = conversation_history[-1]['content']
+
+    try:
+        # Chama a OpenAI com modelo o3-mini (sem salvar no banco - apenas teste)
+        completion = openai.chat.completions.create(
+            model="o3-mini",
+            messages=conversation_history
+        )
+        ai_response = completion.choices[0].message.content
+
+        return JSONResponse(
+            status_code=200,
+            content={"response": ai_response, "conversation_id": None}
+        )
+
+    except Exception as e:
+        print(f"Erro no processamento do chat o3-mini: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"response": "Desculpe, ocorreu um erro ao comunicar com o modelo o3-mini."}
+        )
+
 if __name__ == "__main__":
-    uvicorn.run("app.main:app", host="127.0.0.1", port=8000, reload=True)
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
