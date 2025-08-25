@@ -943,3 +943,29 @@ Responsividade
     font-size: 1.5rem;
     margin-bottom: 0.5rem;
 }
+
+#documentos_o3-button{
+  background: linear-gradient(135deg, #285c2a, #2E7D32);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+}
+
+#documentos_o3_mini-button{
+  background: linear-gradient(135deg, #285c2a, #2E7D32);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+}
