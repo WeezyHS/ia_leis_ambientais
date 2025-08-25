@@ -190,7 +190,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Funcionalidade do botão Documentos
-    const documentosButton = document.getElementById('documentos-button');
+    const documentosButton = document.getElementById('documentos_o3_mini-button');
     if (documentosButton) {
       documentosButton.addEventListener('click', () => {
         showDocumentUploadModal();
