@@ -353,7 +353,195 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     };
 
+    // Funcionalidade do botão Documentos
+    const documentosButton = document.getElementById('documentos-button');
+    if (documentosButton) {
+      documentosButton.addEventListener('click', () => {
+        showDocumentUploadModal();
+      });
+    }
+
+    // Função para mostrar modal de upload de documentos
+    const showDocumentUploadModal = () => {
+      // Cria o modal dinamicamente
+      const modal = document.createElement('div');
+      modal.className = 'document-upload-modal';
+      modal.innerHTML = `
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>Upload de Documento</h3>
+            <span class="close-modal">&times;</span>
+          </div>
+          <div class="modal-body">
+            <div class="upload-area" id="upload-area">
+              <div class="upload-icon">📄</div>
+              <p>Arraste um arquivo PDF aqui ou clique para selecionar</p>
+              <input type="file" id="file-input" accept=".pdf" style="display: none;">
+              <button type="button" id="select-file-btn" class="select-file-btn">Selecionar Arquivo</button>
+            </div>
+            <div class="upload-progress" id="upload-progress" style="display: none;">
+              <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+              </div>
+              <p id="progress-text">Processando documento...</p>
+            </div>
+            <div class="upload-result" id="upload-result" style="display: none;"></div>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(modal);
+
+      // Event listeners do modal
+      const closeModal = modal.querySelector('.close-modal');
+      const fileInput = modal.querySelector('#file-input');
+      const selectFileBtn = modal.querySelector('#select-file-btn');
+      const uploadArea = modal.querySelector('#upload-area');
+      const progressDiv = modal.querySelector('#upload-progress');
+      const resultDiv = modal.querySelector('#upload-result');
+
+      // Fechar modal
+      closeModal.addEventListener('click', () => {
+        document.body.removeChild(modal);
+      });
+
+      // Fechar modal clicando fora
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          document.body.removeChild(modal);
+        }
+      });
+
+      // Botão selecionar arquivo
+      selectFileBtn.addEventListener('click', () => {
+        fileInput.click();
+      });
+
+      // Área de drag and drop
+      uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.classList.add('drag-over');
+      });
+
+      uploadArea.addEventListener('dragleave', () => {
+        uploadArea.classList.remove('drag-over');
+      });
+
+      uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('drag-over');
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+          handleFileUpload(files[0]);
+        }
+      });
+
+      // Input de arquivo
+      fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+          handleFileUpload(e.target.files[0]);
+        }
+      });
+
+      // Função para processar upload
+      const handleFileUpload = async (file) => {
+        if (!file.name.toLowerCase().endsWith('.pdf')) {
+          alert('Por favor, selecione apenas arquivos PDF.');
+          return;
+        }
+
+        // Mostra progresso
+        uploadArea.style.display = 'none';
+        progressDiv.style.display = 'block';
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+          const response = await fetch('/documents/upload', {
+            method: 'POST',
+            body: formData
+          });
+
+          const result = await response.json();
+
+          if (response.ok && result.success) {
+            // Sucesso
+            progressDiv.style.display = 'none';
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = `
+              <div class="upload-success">
+                <div class="success-icon">✅</div>
+                <h4>Documento processado com sucesso!</h4>
+                <p><strong>Arquivo:</strong> ${result.filename}</p>
+                <p><strong>Tamanho:</strong> ${formatFileSize(result.size)}</p>
+                <p><strong>Texto extraído:</strong> ${result.text_length} caracteres</p>
+                <p><strong>Chunks gerados:</strong> ${result.num_chunks}</p>
+                <div class="preview">
+                  <h5>Prévia do conteúdo:</h5>
+                  <p class="preview-text">${result.preview}</p>
+                </div>
+                <div class="document-ready">
+                  <p><strong>✨ Documento disponível para chat!</strong></p>
+                  <p>Agora você pode fazer perguntas sobre este documento diretamente no chat.</p>
+                  <button type="button" class="close-modal-btn" onclick="closeDocumentModal()">Fechar e Continuar</button>
+                </div>
+              </div>
+            `;
+          } else {
+            // Erro
+            progressDiv.style.display = 'none';
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = `
+              <div class="upload-error">
+                <div class="error-icon">❌</div>
+                <h4>Erro ao processar documento</h4>
+                <p>${result.detail || 'Erro desconhecido'}</p>
+                <button type="button" class="retry-btn" onclick="location.reload()">Tentar Novamente</button>
+              </div>
+            `;
+          }
+        } catch (error) {
+          console.error('Erro no upload:', error);
+          progressDiv.style.display = 'none';
+          resultDiv.style.display = 'block';
+          resultDiv.innerHTML = `
+            <div class="upload-error">
+              <div class="error-icon">❌</div>
+              <h4>Erro de conexão</h4>
+              <p>Não foi possível conectar ao servidor. Tente novamente.</p>
+              <button type="button" class="retry-btn" onclick="location.reload()">Tentar Novamente</button>
+            </div>
+          `;
+        }
+      };
+    };
+
+    // Função auxiliar para formatar tamanho do arquivo
+    const formatFileSize = (bytes) => {
+      if (bytes === 0) return '0 Bytes';
+      const k = 1024;
+      const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    };
+
     // Carrega chats existentes em vez de criar novo automaticamente
     loadUserChats();
   });
+
+  // Função global para iniciar chat sobre documento
+  window.closeDocumentModal = () => {
+    // Fecha o modal
+    const modal = document.querySelector('.document-upload-modal');
+    if (modal) {
+      document.body.removeChild(modal);
+    }
+    
+    // Foca no campo de mensagem para o usuário começar a conversar
+    const messageInput = document.getElementById('message-input');
+    if (messageInput) {
+      messageInput.focus();
+    }
+  };
   
