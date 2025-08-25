@@ -238,12 +238,26 @@ async def ask_ia(chat_request: ChatRequest):
         )
 
 @app.post("/ask-ia-o3")
-async def ask_ia_o3(chat_request: ChatRequest):
+async def ask_ia_o3(request: Request):
     """Endpoint para testar modelo o3"""
-    conversation_history = [message.dict() for message in chat_request.history]
-    user_message = conversation_history[-1]['content']
-
     try:
+        # Lê o corpo da requisição manualmente
+        body = await request.body()
+        body_str = body.decode('utf-8')
+        
+        # Parse manual do JSON
+        import json
+        data = json.loads(body_str)
+        
+        # Validação manual
+        if 'history' not in data:
+            return JSONResponse(
+                status_code=400,
+                content={"response": "Campo 'history' é obrigatório"}
+            )
+        
+        conversation_history = data['history']
+        
         # Chama a OpenAI com modelo o3 (sem salvar no banco - apenas teste)
         completion = openai.chat.completions.create(
             model="o3",
@@ -256,20 +270,43 @@ async def ask_ia_o3(chat_request: ChatRequest):
             content={"response": ai_response, "conversation_id": None}
         )
 
+    except UnicodeDecodeError as e:
+        return JSONResponse(
+            status_code=400,
+            content={"response": "Erro de codificação no corpo da requisição"}
+        )
+    except json.JSONDecodeError as e:
+        return JSONResponse(
+            status_code=400,
+            content={"response": "Erro ao decodificar JSON"}
+        )
     except Exception as e:
-        print(f"Erro no processamento do chat o3: {e}")
         return JSONResponse(
             status_code=500,
             content={"response": "Desculpe, ocorreu um erro ao comunicar com o modelo o3."}
         )
 
 @app.post("/ask-ia-o3-mini")
-async def ask_ia_o3_mini(chat_request: ChatRequest):
+async def ask_ia_o3_mini(request: Request):
     """Endpoint para testar modelo o3-mini"""
-    conversation_history = [message.dict() for message in chat_request.history]
-    user_message = conversation_history[-1]['content']
-
     try:
+        # Lê o corpo da requisição manualmente
+        body = await request.body()
+        body_str = body.decode('utf-8')
+        
+        # Parse manual do JSON
+        import json
+        data = json.loads(body_str)
+        
+        # Validação manual
+        if 'history' not in data:
+            return JSONResponse(
+                status_code=400,
+                content={"response": "Campo 'history' é obrigatório"}
+            )
+        
+        conversation_history = data['history']
+        
         # Chama a OpenAI com modelo o3-mini (sem salvar no banco - apenas teste)
         completion = openai.chat.completions.create(
             model="o3-mini",
@@ -282,8 +319,17 @@ async def ask_ia_o3_mini(chat_request: ChatRequest):
             content={"response": ai_response, "conversation_id": None}
         )
 
+    except UnicodeDecodeError as e:
+        return JSONResponse(
+            status_code=400,
+            content={"response": "Erro de codificação no corpo da requisição"}
+        )
+    except json.JSONDecodeError as e:
+        return JSONResponse(
+            status_code=400,
+            content={"response": "Erro ao decodificar JSON"}
+        )
     except Exception as e:
-        print(f"Erro no processamento do chat o3-mini: {e}")
         return JSONResponse(
             status_code=500,
             content={"response": "Desculpe, ocorreu um erro ao comunicar com o modelo o3-mini."}
