@@ -2,7 +2,8 @@
 from fastapi import FastAPI, Request, Body
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse, FileResponse
-from app.routes import query, importar, consulta, multi_sources, coema, auth
+from app.routes import query, importar, consulta, multi_sources, coema, auth, documents
+from app.services.document_chat_service import DocumentChatService
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.templating import Jinja2Templates
@@ -54,6 +55,9 @@ app.add_middleware(
 
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 app.mount("/teste-static", StaticFiles(directory="TESTE_chat_o3_e_o3-mini_Rogerio"), name="teste-static")
+
+# Incluir rotas de documentos
+app.include_router(documents.router, prefix="/documents", tags=["documents"])
 
 @app.get("/dashboard")
 async def serve_dashboard(request: Request):
@@ -187,10 +191,30 @@ async def ask_ia(chat_request: ChatRequest):
             conv_id = new_conv.data[0]["id"]
             conversation_id = str(conv_id)  # <- padroniza AQUI
 
-        # 4) Chama a OpenAI normalmente (histórico só tem role/content)
+        # 4) Verificar se há documentos carregados e incluir contexto
+        documents_list = DocumentChatService.list_documents()
+        enhanced_messages = conversation_history.copy()
+        
+        if documents_list:
+            # Se há documentos, buscar contexto relevante do mais recente
+            latest_doc = documents_list[-1]  # Documento mais recente
+            doc_id = latest_doc['id']
+            
+            # Buscar chunks relevantes para a pergunta do usuário
+            relevant_chunks = DocumentChatService.search_relevant_chunks(doc_id, user_message)
+            
+            if relevant_chunks:
+                # Construir contexto do documento
+                context = f"\n\nContexto do documento '{latest_doc['filename']}':\n"
+                context += "\n".join(f"Trecho {i+1}: {chunk}" for i, chunk in enumerate(relevant_chunks[:3]))
+                
+                # Modificar a última mensagem do usuário para incluir contexto
+                enhanced_messages[-1]['content'] = user_message + context
+
+        # 5) Chama a OpenAI com mensagens aprimoradas
         completion = openai.chat.completions.create(
             model="gpt-4o-mini",
-            messages=conversation_history
+            messages=enhanced_messages
         )
         ai_response = completion.choices[0].message.content
 
