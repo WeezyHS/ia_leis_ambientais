@@ -24,3 +24,5 @@ langchain-community
 langchain-pinecone
 tqdm
 pydantic
+
+pydantic[email]
