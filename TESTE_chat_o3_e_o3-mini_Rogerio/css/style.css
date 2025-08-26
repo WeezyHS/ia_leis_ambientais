@@ -944,7 +944,7 @@ Responsividade
     margin-bottom: 0.5rem;
 }
 
-#documentos_o3-button{
+#investigar_o3-button{
   background: linear-gradient(135deg, #285c2a, #2E7D32);
   color: white;
   border: none;
@@ -957,7 +957,7 @@ Responsividade
   transition: all 0.3s ease;
 }
 
-#documentos_o3_mini-button{
+#documentos_o3-button{
   background: linear-gradient(135deg, #285c2a, #2E7D32);
   color: white;
   border: none;
