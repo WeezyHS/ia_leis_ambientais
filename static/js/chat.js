@@ -456,6 +456,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const formData = new FormData();
         formData.append('file', file);
+        
+        // Adicionar conversation_id se existir
+        if (currentConversationKey) {
+          const conv = conversations.get(currentConversationKey);
+          if (conv && conv.id) {
+            formData.append('conversation_id', conv.id);
+          }
+        }
 
         try {
           const response = await fetch('/documents/upload', {
