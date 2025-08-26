@@ -1,9 +1,9 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, UploadFile, File, HTTPException, Form
 from app.services.pdf_service import PDFService
 from app.services.document_chat_service import DocumentChatService
 import uuid
 from pydantic import BaseModel
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 router = APIRouter()
 
@@ -12,7 +12,7 @@ class ChatRequest(BaseModel):
     message: str
 
 @router.post("/upload")
-async def upload_pdf(file: UploadFile = File(...)):
+async def upload_pdf(file: UploadFile = File(...), conversation_id: Optional[str] = Form(None)):
     """
     Endpoint para upload e processamento de arquivos PDF
     """
@@ -36,10 +36,15 @@ async def upload_pdf(file: UploadFile = File(...)):
         # Armazenar documento no serviço
         DocumentChatService.store_document(document_id, file.filename, chunks)
         
+        # Se conversation_id foi fornecido, associar documento à conversa
+        if conversation_id:
+            DocumentChatService.associate_document_to_conversation(document_id, conversation_id)
+        
         return {
             "success": True,
             "message": "PDF processado com sucesso",
             "document_id": document_id,
+            "conversation_id": conversation_id,
             "filename": file.filename,
             "chunks_count": len(chunks),
             "preview": chunks[0][:200] + "..." if chunks[0] else "Sem conteúdo"

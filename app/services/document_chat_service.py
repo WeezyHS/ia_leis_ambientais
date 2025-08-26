@@ -10,6 +10,8 @@ class DocumentChatService:
     # Armazenamento em memória dos documentos processados
     _documents: Dict[str, Dict] = {}
     _document_chats: Dict[str, List[Dict]] = {}
+    # Mapeamento de conversation_id para document_id
+    _conversation_documents: Dict[str, str] = {}
     
     @classmethod
     def store_document(cls, document_id: str, filename: str, chunks: List[str]) -> str:
@@ -196,3 +198,57 @@ Responda baseando-se exclusivamente no conteúdo do documento fornecido. Se a in
             str: ID único
         """
         return str(uuid.uuid4())
+    
+    @classmethod
+    def associate_document_to_conversation(cls, document_id: str, conversation_id: str) -> None:
+        """
+        Associa um documento a uma conversa específica.
+        
+        Args:
+            document_id: ID do documento
+            conversation_id: ID da conversa
+        """
+        cls._conversation_documents[conversation_id] = document_id
+    
+    @classmethod
+    def get_document_for_conversation(cls, conversation_id: str) -> Optional[Dict]:
+        """
+        Recupera o documento associado a uma conversa específica.
+        
+        Args:
+            conversation_id: ID da conversa
+            
+        Returns:
+            Dict: Informações do documento ou None se não encontrado
+        """
+        document_id = cls._conversation_documents.get(conversation_id)
+        if document_id:
+            return cls.get_document(document_id)
+        return None
+    
+    @classmethod
+    def get_latest_document_context(cls, conversation_id: str, query: str, max_chunks: int = 3) -> Optional[str]:
+        """
+        Busca contexto do documento associado a uma conversa específica.
+        
+        Args:
+            conversation_id: ID da conversa
+            query: Pergunta do usuário
+            max_chunks: Número máximo de chunks a retornar
+            
+        Returns:
+            str: Contexto formatado ou None se não há documento associado
+        """
+        document = cls.get_document_for_conversation(conversation_id)
+        if not document:
+            return None
+        
+        document_id = cls._conversation_documents[conversation_id]
+        relevant_chunks = cls.search_relevant_chunks(document_id, query, max_chunks)
+        
+        if relevant_chunks:
+            context = f"\n\nContexto do documento '{document['filename']}':\n"
+            context += "\n".join(f"Trecho {i+1}: {chunk}" for i, chunk in enumerate(relevant_chunks))
+            return context
+        
+        return None

@@ -191,25 +191,15 @@ async def ask_ia(chat_request: ChatRequest):
             conv_id = new_conv.data[0]["id"]
             conversation_id = str(conv_id)  # <- padroniza AQUI
 
-        # 4) Verificar se há documentos carregados e incluir contexto
-        documents_list = DocumentChatService.list_documents()
+        # 4) Verificar se há documento associado a esta conversa e incluir contexto
         enhanced_messages = conversation_history.copy()
         
-        if documents_list:
-            # Se há documentos, buscar contexto relevante do mais recente
-            latest_doc = documents_list[-1]  # Documento mais recente
-            doc_id = latest_doc['id']
-            
-            # Buscar chunks relevantes para a pergunta do usuário
-            relevant_chunks = DocumentChatService.search_relevant_chunks(doc_id, user_message)
-            
-            if relevant_chunks:
-                # Construir contexto do documento
-                context = f"\n\nContexto do documento '{latest_doc['filename']}':\n"
-                context += "\n".join(f"Trecho {i+1}: {chunk}" for i, chunk in enumerate(relevant_chunks[:3]))
-                
-                # Modificar a última mensagem do usuário para incluir contexto
-                enhanced_messages[-1]['content'] = user_message + context
+        # Buscar contexto do documento associado a esta conversa específica
+        document_context = DocumentChatService.get_latest_document_context(conversation_id, user_message)
+        
+        if document_context:
+            # Modificar a última mensagem do usuário para incluir contexto
+            enhanced_messages[-1]['content'] = user_message + document_context
 
         # 5) Chama a OpenAI com mensagens aprimoradas
         completion = openai.chat.completions.create(
@@ -259,25 +249,16 @@ async def ask_ia_o3(request: Request):
         conversation_history = data['history']
         user_message = conversation_history[-1]['content']
         
-        # Verificar se há documentos carregados e incluir contexto
-        documents_list = DocumentChatService.list_documents()
+        # Buscar contexto do documento associado a esta conversa específica
+        conversation_id = data.get('conversation_id')
         enhanced_messages = conversation_history.copy()
         
-        if documents_list:
-            # Se há documentos, buscar contexto relevante do mais recente
-            latest_doc = documents_list[-1]  # Documento mais recente
-            doc_id = latest_doc['id']
+        if conversation_id:
+            document_context = DocumentChatService.get_latest_document_context(conversation_id, user_message)
             
-            # Buscar chunks relevantes para a pergunta do usuário
-            relevant_chunks = DocumentChatService.search_relevant_chunks(doc_id, user_message)
-            
-            if relevant_chunks:
-                # Construir contexto do documento
-                context = f"\n\nContexto do documento '{latest_doc['filename']}':\n"
-                context += "\n".join(f"Trecho {i+1}: {chunk}" for i, chunk in enumerate(relevant_chunks[:3]))
-                
+            if document_context:
                 # Modificar a última mensagem do usuário para incluir contexto
-                enhanced_messages[-1]['content'] = user_message + context
+                enhanced_messages[-1]['content'] = user_message + document_context
         
         # Chama a OpenAI com modelo o3 (sem salvar no banco - apenas teste)
         completion = openai.chat.completions.create(
@@ -329,25 +310,16 @@ async def ask_ia_o3_mini(request: Request):
         conversation_history = data['history']
         user_message = conversation_history[-1]['content']
         
-        # Verificar se há documentos carregados e incluir contexto
-        documents_list = DocumentChatService.list_documents()
+        # Buscar contexto do documento associado a esta conversa específica
+        conversation_id = data.get('conversation_id')
         enhanced_messages = conversation_history.copy()
         
-        if documents_list:
-            # Se há documentos, buscar contexto relevante do mais recente
-            latest_doc = documents_list[-1]  # Documento mais recente
-            doc_id = latest_doc['id']
+        if conversation_id:
+            document_context = DocumentChatService.get_latest_document_context(conversation_id, user_message)
             
-            # Buscar chunks relevantes para a pergunta do usuário
-            relevant_chunks = DocumentChatService.search_relevant_chunks(doc_id, user_message)
-            
-            if relevant_chunks:
-                # Construir contexto do documento
-                context = f"\n\nContexto do documento '{latest_doc['filename']}':\n"
-                context += "\n".join(f"Trecho {i+1}: {chunk}" for i, chunk in enumerate(relevant_chunks[:3]))
-                
+            if document_context:
                 # Modificar a última mensagem do usuário para incluir contexto
-                enhanced_messages[-1]['content'] = user_message + context
+                enhanced_messages[-1]['content'] = user_message + document_context
         
         # Chama a OpenAI com modelo o3-mini (sem salvar no banco - apenas teste)
         completion = openai.chat.completions.create(
