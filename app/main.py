@@ -105,15 +105,12 @@ async def serve_login_page(request: Request):
 async def serve_chat_page(request: Request):
     return templates.TemplateResponse("IA_chat.html", {"request": request})
 
-@app.get("/teste-o3")
-async def teste_o3(request: Request):
-    """Página de teste para modelo o3"""
-    return FileResponse("TESTE_chat_o3_e_o3-mini_Rogerio/chat_o3.html")
 
-@app.get("/teste-o3-mini")
-async def teste_o3_mini(request: Request):
-    """Página de teste para modelo o3-mini"""
-    return FileResponse("TESTE_chat_o3_e_o3-mini_Rogerio/chat_o3-mini.html")
+
+@app.get("/teste-o3-completo")
+async def teste_o3_completo(request: Request):
+    """Página de teste completa para modelo o3 com persistência"""
+    return FileResponse("TESTE_chat_o3_e_o3-mini_Rogerio/chat_o3_completo.html")
 
 @app.get("/gerador-tabelas")
 async def serve_gerador_tabelas(request: Request):
@@ -228,126 +225,67 @@ async def ask_ia(chat_request: ChatRequest):
         )
 
 @app.post("/ask-ia-o3")
-async def ask_ia_o3(request: Request):
-    """Endpoint para testar modelo o3"""
+async def ask_ia_o3(chat_request: ChatRequest):
+    """Endpoint para testar modelo o3 com persistência completa"""
+    # 1) Converte o histórico em dicts simples
+    conversation_history = [message.dict() for message in chat_request.history]
+    user_message = conversation_history[-1]['content']
+
+    # 2) Converte conversation_id vindo do request para string (se existir)
+    conversation_id = None
+    if chat_request.conversation_id is not None:
+        # chat_request.conversation_id é UUID por causa do Pydantic
+        conversation_id = str(chat_request.conversation_id)
+
+    test_user_id = "ca9520b0-2cd7-4e6f-b8d2-8b6e805188b7"
+
     try:
-        # Lê o corpo da requisição manualmente
-        body = await request.body()
-        body_str = body.decode('utf-8')
-        
-        # Parse manual do JSON
-        import json
-        data = json.loads(body_str)
-        
-        # Validação manual
-        if 'history' not in data:
-            return JSONResponse(
-                status_code=400,
-                content={"response": "Campo 'history' é obrigatório"}
-            )
-        
-        conversation_history = data['history']
-        user_message = conversation_history[-1]['content']
-        
-        # Buscar contexto do documento associado a esta conversa específica
-        conversation_id = data.get('conversation_id')
+        # 3) Se não veio id, cria a conversa e já padroniza para string
+        if conversation_id is None:
+            new_conv = supabase.table("conversations").insert({
+                "user_id": test_user_id,
+                "title": user_message[:50]
+            }).execute()
+            conv_id = new_conv.data[0]["id"]
+            conversation_id = str(conv_id)  # <- padroniza AQUI
+
+        # 4) Verificar se há documento associado a esta conversa e incluir contexto
         enhanced_messages = conversation_history.copy()
         
-        if conversation_id:
-            document_context = DocumentChatService.get_latest_document_context(conversation_id, user_message)
-            
-            if document_context:
-                # Modificar a última mensagem do usuário para incluir contexto
-                enhanced_messages[-1]['content'] = user_message + document_context
+        # Buscar contexto do documento associado a esta conversa específica
+        document_context = DocumentChatService.get_latest_document_context(conversation_id, user_message)
         
-        # Chama a OpenAI com modelo o3 (sem salvar no banco - apenas teste)
+        if document_context:
+            # Modificar a última mensagem do usuário para incluir contexto
+            enhanced_messages[-1]['content'] = user_message + document_context
+
+        # 5) Chama a OpenAI com modelo o3
         completion = openai.chat.completions.create(
             model="o3",
             messages=enhanced_messages
         )
         ai_response = completion.choices[0].message.content
 
+        # 6) Ao salvar mensagens no Supabase, use SEMPRE string no conversation_id
+        supabase.table("messages").insert([
+            {"conversation_id": conversation_id, "role": "user", "content": user_message},
+            {"conversation_id": conversation_id, "role": "assistant", "content": ai_response}
+        ]).execute()
+
         return JSONResponse(
             status_code=200,
-            content={"response": ai_response, "conversation_id": None}
+            content={"response": ai_response, "conversation_id": conversation_id}
         )
 
-    except UnicodeDecodeError as e:
-        return JSONResponse(
-            status_code=400,
-            content={"response": "Erro de codificação no corpo da requisição"}
-        )
-    except json.JSONDecodeError as e:
-        return JSONResponse(
-            status_code=400,
-            content={"response": "Erro ao decodificar JSON"}
-        )
     except Exception as e:
+        # Esse erro pode vir tanto da OpenAI quanto do Supabase (serialização)
+        print(f"Erro no processamento do chat o3: {e}")
         return JSONResponse(
             status_code=500,
             content={"response": "Desculpe, ocorreu um erro ao comunicar com o modelo o3."}
         )
 
-@app.post("/ask-ia-o3-mini")
-async def ask_ia_o3_mini(request: Request):
-    """Endpoint para testar modelo o3-mini"""
-    try:
-        # Lê o corpo da requisição manualmente
-        body = await request.body()
-        body_str = body.decode('utf-8')
-        
-        # Parse manual do JSON
-        import json
-        data = json.loads(body_str)
-        
-        # Validação manual
-        if 'history' not in data:
-            return JSONResponse(
-                status_code=400,
-                content={"response": "Campo 'history' é obrigatório"}
-            )
-        
-        conversation_history = data['history']
-        user_message = conversation_history[-1]['content']
-        
-        # Buscar contexto do documento associado a esta conversa específica
-        conversation_id = data.get('conversation_id')
-        enhanced_messages = conversation_history.copy()
-        
-        if conversation_id:
-            document_context = DocumentChatService.get_latest_document_context(conversation_id, user_message)
-            
-            if document_context:
-                # Modificar a última mensagem do usuário para incluir contexto
-                enhanced_messages[-1]['content'] = user_message + document_context
-        
-        # Chama a OpenAI com modelo o3-mini (sem salvar no banco - apenas teste)
-        completion = openai.chat.completions.create(
-            model="o3-mini",
-            messages=enhanced_messages
-        )
-        ai_response = completion.choices[0].message.content
 
-        return JSONResponse(
-            status_code=200,
-            content={"response": ai_response, "conversation_id": None}
-        )
-
-    except UnicodeDecodeError as e:
-        return JSONResponse(
-            status_code=400,
-            content={"response": "Erro de codificação no corpo da requisição"}
-        )
-    except json.JSONDecodeError as e:
-        return JSONResponse(
-            status_code=400,
-            content={"response": "Erro ao decodificar JSON"}
-        )
-    except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={"response": "Desculpe, ocorreu um erro ao comunicar com o modelo o3-mini."}
-        )
 
 if __name__ == "__main__":
     uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
