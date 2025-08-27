@@ -125,9 +125,15 @@ async def teste_o3_completo(request: Request):
 #         return RedirectResponse(url=STREAMLIT_URL, status_code=302)
 #     return JSONResponse(status_code=500, content={"message": "STREAMLIT_URL não configurada"})
 
+# @app.get("/gerador-tabelas")
+# async def serve_gerador_tabelas():
+#     return RedirectResponse("https://sistema-pleiade-ambiental-copy-production.up.railway.app", status_code=302)
+
+# Em vez do RedirectResponse externo, deveria ser algo como:
 @app.get("/gerador-tabelas")
 async def serve_gerador_tabelas():
-    return RedirectResponse("https://sistema-pleiade-ambiental-copy-production.up.railway.app", status_code=302)
+    # Proxy para o Streamlit local na porta 8501
+    return proxy_to_streamlit("http://localhost:8501")
 
 @app.post("/login")
 async def handle_login(user_login: UserLogin):
