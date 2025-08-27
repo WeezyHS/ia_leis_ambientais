@@ -127,7 +127,7 @@ async def teste_o3_completo(request: Request):
 
 @app.get("/gerador-tabelas")
 async def serve_gerador_tabelas():
-    return RedirectResponse("https://sistema-pleiade-ambiental-xxxx.up.railway.app")
+    return RedirectResponse("sistema-pleiade-ambiental-copy-production.up.railway.app")
 
 @app.post("/login")
 async def handle_login(user_login: UserLogin):
