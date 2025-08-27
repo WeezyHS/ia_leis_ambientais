@@ -133,7 +133,7 @@ async def teste_o3_completo(request: Request):
 @app.get("/gerador-tabelas")
 async def serve_gerador_tabelas():
     # Proxy para o Streamlit local na porta 8501
-    return proxy_to_streamlit("http://localhost:8501")
+    return RedirectResponse("http://localhost:8501", status_code=302)
 
 @app.post("/login")
 async def handle_login(user_login: UserLogin):
