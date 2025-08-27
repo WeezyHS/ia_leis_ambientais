@@ -119,15 +119,11 @@ async def teste_o3_completo(request: Request):
 #     from fastapi.responses import RedirectResponse
 #     return RedirectResponse(url="http://localhost:8501", status_code=302)
 
-# @app.get("/gerador-tabelas")
-# async def serve_gerador_tabelas():
-#     if STREAMLIT_URL:
-#         return RedirectResponse(url=STREAMLIT_URL, status_code=302)
-#     return JSONResponse(status_code=500, content={"message": "STREAMLIT_URL não configurada"})
-
 @app.get("/gerador-tabelas")
 async def serve_gerador_tabelas():
-    return RedirectResponse("sistema-pleiade-ambiental-copy-production.up.railway.app")
+    if STREAMLIT_URL:
+        return RedirectResponse(url=STREAMLIT_URL, status_code=302)
+    return JSONResponse(status_code=500, content={"message": "STREAMLIT_URL não configurada"})
 
 @app.post("/login")
 async def handle_login(user_login: UserLogin):
