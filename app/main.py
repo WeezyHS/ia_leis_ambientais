@@ -132,8 +132,9 @@ async def teste_o3_completo(request: Request):
 # Em vez do RedirectResponse externo, deveria ser algo como:
 @app.get("/gerador-tabelas")
 async def serve_gerador_tabelas():
-    # Proxy para o Streamlit local na porta 8501
-    return RedirectResponse("http://localhost:8501", status_code=302)
+    # Redireciona para o Streamlit usando a URL do ambiente ou localhost como fallback
+    streamlit_url = STREAMLIT_URL or "http://localhost:8501"
+    return RedirectResponse(streamlit_url, status_code=302)
 
 @app.post("/login")
 async def handle_login(user_login: UserLogin):
