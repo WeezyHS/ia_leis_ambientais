@@ -1,6 +1,7 @@
 import os
 import re
-from langchain.chat_models import ChatOpenAI
+#from langchain.chat_models import ChatOpenAI
+from langchain_openai import ChatOpenAI
 from langchain.chains import RetrievalQA
 from langchain_core.prompts import PromptTemplate
 from app.services.pinecone_service import vectorstore, search_similar_documents

@@ -26,3 +26,6 @@ tqdm
 pydantic
 
 pydantic[email]
+supabase
+langchain-community
+langchain-openai
