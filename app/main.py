@@ -1,7 +1,7 @@
 # --- Importações ---
 from fastapi import FastAPI, Request, Body
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, RedirectResponse
 from app.routes import query, importar, consulta, multi_sources, coema, auth, documents
 from app.services.document_chat_service import DocumentChatService
 import uvicorn
@@ -18,6 +18,8 @@ from typing import List, Optional
 from uuid import UUID
 
 load_dotenv()
+
+STREAMLIT_URL = os.getenv("STREAMLIT_URL", "")
 
 class UserLogin(BaseModel):
     email: str
@@ -112,10 +114,16 @@ async def teste_o3_completo(request: Request):
     """Página de teste completa para modelo o3 com persistência"""
     return FileResponse("TESTE_chat_o3_e_o3-mini_Rogerio/chat_o3_completo.html")
 
+# @app.get("/gerador-tabelas")
+# async def serve_gerador_tabelas(request: Request):
+#     from fastapi.responses import RedirectResponse
+#     return RedirectResponse(url="http://localhost:8501", status_code=302)
+
 @app.get("/gerador-tabelas")
-async def serve_gerador_tabelas(request: Request):
-    from fastapi.responses import RedirectResponse
-    return RedirectResponse(url="http://localhost:8501", status_code=302)
+async def serve_gerador_tabelas():
+    if STREAMLIT_URL:
+        return RedirectResponse(url=STREAMLIT_URL, status_code=302)
+    return JSONResponse(status_code=500, content={"message": "STREAMLIT_URL não configurada"})
 
 @app.post("/login")
 async def handle_login(user_login: UserLogin):
