@@ -10,12 +10,20 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from pathlib import Path
 import os
+import sys
 from dotenv import load_dotenv
 from supabase import create_client, Client
 import openai
+import pandas as pd
+import json
+from io import BytesIO
 
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from uuid import UUID
+
+# Adicionar o diretório tabela_generator ao path
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'tabela_generator'))
+from ia_tabela_service import IATabela
 
 load_dotenv()
 
@@ -32,6 +40,21 @@ class Message(BaseModel):
 class ChatRequest(BaseModel):
     history: List[Message]
     conversation_id: Optional[UUID] = None # O ID é opcional
+
+class TabelaRequest(BaseModel):
+    descricao: str
+    municipio: Optional[str] = None
+    atividade: Optional[str] = None
+    esferas: List[str] = ["federal", "estadual", "municipal"]
+    max_documentos: int = 50
+    formato: str = "excel"
+
+class QuadroResumoRequest(BaseModel):
+    descricao: str
+    municipio: Optional[str] = None
+    atividade: Optional[str] = None
+    esferas: List[str] = ["federal", "estadual", "municipal"]
+    max_documentos: int = 20
 
 app = FastAPI(
     title="API Leis Ambientais",
@@ -114,27 +137,157 @@ async def teste_o3_completo(request: Request):
     """Página de teste completa para modelo o3 com persistência"""
     return FileResponse("TESTE_chat_o3_e_o3-mini_Rogerio/chat_o3_completo.html")
 
-# @app.get("/gerador-tabelas")
-# async def serve_gerador_tabelas(request: Request):
-#     from fastapi.responses import RedirectResponse
-#     return RedirectResponse(url="http://localhost:8501", status_code=302)
-
-# @app.get("/gerador-tabelas")
-# async def serve_gerador_tabelas():
-#     if STREAMLIT_URL:
-#         return RedirectResponse(url=STREAMLIT_URL, status_code=302)
-#     return JSONResponse(status_code=500, content={"message": "STREAMLIT_URL não configurada"})
-
-# @app.get("/gerador-tabelas")
-# async def serve_gerador_tabelas():
-#     return RedirectResponse("https://sistema-pleiade-ambiental-copy-production.up.railway.app", status_code=302)
-
 # Em vez do RedirectResponse externo, deveria ser algo como:
 @app.get("/gerador-tabelas")
-async def serve_gerador_tabelas():
-    # Redireciona para o Streamlit usando a URL do ambiente ou localhost como fallback
-    streamlit_url = STREAMLIT_URL or "http://localhost:8501"
-    return RedirectResponse(streamlit_url, status_code=302)
+async def serve_gerador_tabelas(request: Request):
+    """Serve a nova interface HTML do gerador de tabelas"""
+    return templates.TemplateResponse("gerador_tabelas.html", {"request": request})
+
+@app.get("/api/fontes-dados")
+async def get_fontes_dados():
+    """Retorna contadores das fontes de dados disponíveis"""
+    try:
+        ia_tabela = IATabela()
+        dados = ia_tabela.todas_fontes_data
+
+        # Contar por jurisdição
+        federais = len([d for d in dados if d.get('jurisdicao', '').startswith('Federal')])
+        estaduais = len([d for d in dados if d.get('jurisdicao', '').startswith('Estadual')])
+        municipais = len([d for d in dados if d.get('jurisdicao', '').startswith('Municipal')])
+        total = len(dados)
+        
+        return JSONResponse(content={
+            "federais": federais,
+            "estaduais": estaduais,
+            "municipais": municipais,
+            "total": total
+        })
+    except Exception as e:
+        print(f"Erro ao carregar fontes de dados: {e}")
+        return JSONResponse(status_code=500, content={"error": "Erro ao carregar dados"})
+
+@app.post("/api/gerar-estrutura")
+async def gerar_estrutura_tabela(request: TabelaRequest):
+    """Gera estrutura de tabela baseada na descrição do usuário"""
+    try:
+        ia_tabela = IATabela()
+        
+        # Gerar estrutura usando IA
+        estrutura = ia_tabela.gerar_estrutura_tabela(request.descricao)
+        
+        # Popular tabela com dados
+        incluir_todas_fontes = len(request.esferas) > 1 or "federal" in request.esferas
+        df_populado = ia_tabela.popular_tabela(estrutura, request.max_documentos, incluir_todas_fontes)
+        
+        # Converter DataFrame para formato JSON
+        dados_tabela = df_populado.to_dict('records')
+        colunas = list(df_populado.columns)
+        
+        return JSONResponse(content={
+            "estrutura": estrutura,
+            "dados": dados_tabela,
+            "colunas": colunas,
+            "total_linhas": len(df_populado),
+            "estatisticas": {
+                "documentos_processados": len(df_populado),
+                "colunas_geradas": len(colunas),
+                "esferas_incluidas": request.esferas
+            }
+        })
+        
+    except Exception as e:
+        print(f"Erro ao gerar estrutura: {e}")
+        return JSONResponse(status_code=500, content={"error": f"Erro ao gerar estrutura: {str(e)}"})
+
+@app.post("/api/gerar-quadro-resumo")
+async def gerar_quadro_resumo(request: QuadroResumoRequest):
+    """Gera quadro-resumo simplificado das legislações"""
+    try:
+        ia_tabela = IATabela()
+        
+        # Estrutura simplificada para quadro-resumo
+        estrutura_resumo = {
+            "titulo_tabela": "Quadro-Resumo de Legislação Ambiental",
+            "descricao": "Resumo das principais legislações aplicáveis",
+            "colunas": [
+                {"nome": "legislacao", "tipo": "texto", "descricao": "Nome da legislação"},
+                {"nome": "esfera", "tipo": "texto", "descricao": "Esfera (Federal/Estadual/Municipal)"},
+                {"nome": "tema", "tipo": "texto", "descricao": "Tema principal"},
+                {"nome": "aplicabilidade", "tipo": "texto", "descricao": "Aplicabilidade ao projeto"}
+            ],
+            "filtros_sugeridos": ["esfera", "tema"],
+            "ordenacao_padrao": "esfera"
+        }
+        
+        # Popular com dados reduzidos
+        incluir_todas_fontes = len(request.esferas) > 1 or "federal" in request.esferas
+        df_populado = ia_tabela.popular_tabela(estrutura_resumo, request.max_documentos, incluir_todas_fontes)
+        
+        # Converter para formato JSON
+        dados_tabela = df_populado.to_dict('records')
+        colunas = list(df_populado.columns)
+        
+        return JSONResponse(content={
+            "estrutura": estrutura_resumo,
+            "dados": dados_tabela,
+            "colunas": colunas,
+            "total_linhas": len(df_populado),
+            "estatisticas": {
+                "documentos_processados": len(df_populado),
+                "tipo": "quadro_resumo",
+                "esferas_incluidas": request.esferas
+            }
+        })
+        
+    except Exception as e:
+        print(f"Erro ao gerar quadro-resumo: {e}")
+        return JSONResponse(status_code=500, content={"error": f"Erro ao gerar quadro-resumo: {str(e)}"})
+
+@app.post("/api/download-tabela")
+async def download_tabela(request: dict = Body(...)):
+    """Gera e retorna arquivo para download (Excel ou CSV)"""
+    try:
+        from fastapi.responses import StreamingResponse
+        import tempfile
+        
+        dados = request.get('dados', [])
+        formato = request.get('formato', 'excel')
+        nome_arquivo = request.get('nome_arquivo', 'tabela_legislacao')
+        
+        if not dados:
+            return JSONResponse(status_code=400, content={"error": "Nenhum dado fornecido"})
+        
+        # Criar DataFrame
+        df = pd.DataFrame(dados)
+        
+        if formato.lower() == 'excel':
+            # Gerar Excel
+            output = BytesIO()
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                df.to_excel(writer, sheet_name='Legislação Ambiental', index=False)
+            output.seek(0)
+            
+            return StreamingResponse(
+                BytesIO(output.getvalue()),
+                media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                headers={"Content-Disposition": f"attachment; filename={nome_arquivo}.xlsx"}
+            )
+        else:
+            # Gerar CSV
+            output = BytesIO()
+            csv_data = df.to_csv(index=False, encoding='utf-8-sig')
+            output.write(csv_data.encode('utf-8-sig'))
+            output.seek(0)
+            
+            return StreamingResponse(
+                BytesIO(output.getvalue()),
+                media_type='text/csv',
+                headers={"Content-Disposition": f"attachment; filename={nome_arquivo}.csv"}
+            )
+            
+    except Exception as e:
+        print(f"Erro ao gerar download: {e}")
+        return JSONResponse(status_code=500, content={"error": f"Erro ao gerar arquivo: {str(e)}"})
 
 @app.post("/login")
 async def handle_login(user_login: UserLogin):

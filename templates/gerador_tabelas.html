@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Tabelas - Plêiade Ambiental</title>
+    <link rel="stylesheet" href="/static/css/gerador_tabelas.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container" data-theme="dark">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h3>🌿 Plêiade Ambiental</h3>
+            </div>
+            
+            <div class="theme-toggle">
+                <label class="toggle-switch">
+                    <input type="checkbox" id="themeToggle" checked>
+                    <span class="slider"></span>
+                </label>
+                <span class="theme-label">Modo Escuro</span>
+            </div>
+            
+            <div class="sidebar-section">
+                <h4>📊 Fontes de Dados</h4>
+                <div class="data-source">
+                    <div class="source-item">
+                        <span class="source-icon">🏛️</span>
+                        <div class="source-info">
+                            <div class="source-name">Leis Federais</div>
+                            <div class="source-count" id="federalCount">-</div>
+                        </div>
+                    </div>
+                    <div class="source-item">
+                        <span class="source-icon">🏢</span>
+                        <div class="source-info">
+                            <div class="source-name">Leis Estaduais</div>
+                            <div class="source-count" id="estadualCount">-</div>
+                        </div>
+                    </div>
+                    <div class="source-item">
+                        <span class="source-icon">🏘️</span>
+                        <div class="source-info">
+                            <div class="source-name">Leis Municipais</div>
+                            <div class="source-count" id="municipalCount">-</div>
+                        </div>
+                    </div>
+                    <div class="source-item total">
+                        <span class="source-icon">📚</span>
+                        <div class="source-info">
+                            <div class="source-name">Total de Fontes</div>
+                            <div class="source-count" id="totalCount">-</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="sidebar-section">
+                <h4>📋 Fontes Disponíveis</h4>
+                <div class="sources-list">
+                    <div class="source-tag">CONAMA</div>
+                    <div class="source-tag">IBAMA</div>
+                    <div class="source-tag">MMA</div>
+                    <div class="source-tag">SNUC</div>
+                    <div class="source-tag">Lei 6.938/81</div>
+                    <div class="source-tag">Lei 9.605/98</div>
+                    <div class="source-tag">Lei 12.651/12</div>
+                    <div class="source-tag">Decreto 6.514/08</div>
+                </div>
+            </div>
+            
+            <div class="sidebar-section">
+                <h4>ℹ️ Instruções de Uso</h4>
+                <div class="instructions">
+                    <p><strong>1. Localização e Atividade:</strong> Descreva seu projeto ou selecione manualmente o município e tipo de atividade.</p>
+                    <p><strong>2. Configurações:</strong> Escolha as esferas legais e defina o número máximo de legislações.</p>
+                    <p><strong>3. Geração:</strong> Clique em "Gerar Estrutura" ou "Gerar Quadro-Resumo" conforme sua necessidade.</p>
+                    <p><strong>4. Download:</strong> Baixe os resultados em Excel ou CSV.</p>
+                </div>
+            </div>
+            
+            <div class="sidebar-section">
+                <h4>⚠️ Premissas Obrigatórias</h4>
+                <div class="premises">
+                    <p>• A IA é direcionada para legislação ambiental brasileira</p>
+                    <p>• Resultados baseados em fontes oficiais indexadas</p>
+                    <p>• Sempre consulte a legislação original</p>
+                    <p>• Use como ferramenta de apoio, não substituto jurídico</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="main-header">
+                <h1>🌿 Gerador de Tabelas de Legislação Ambiental</h1>
+                <p>Ferramenta de IA para criação de tabelas estruturadas de legislação ambiental brasileira</p>
+            </div>
+            
+            <div class="warning-box">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>Esta IA é direcionada especificamente para legislação ambiental brasileira. Os resultados são baseados em fontes oficiais indexadas.</span>
+            </div>
+            
+            <!-- Localização e Atividade -->
+            <div class="section-card">
+                <h2>📍 Localização e Atividade</h2>
+                
+                <div class="input-method-toggle">
+                    <button class="toggle-btn active" data-method="detailed">Comando Detalhado</button>
+                    <button class="toggle-btn" data-method="manual">Seleção Manual</button>
+                </div>
+                
+                <div class="input-method" id="detailedMethod">
+                    <div class="form-group">
+                        <label for="projectDescription">Descreva seu projeto em linguagem natural:</label>
+                        <textarea id="projectDescription" placeholder="Ex: Construção de uma usina hidrelétrica no município de Itaipu, Paraná, para geração de energia elétrica..." rows="4"></textarea>
+                        <div class="input-help">💡 Descreva detalhadamente seu projeto incluindo localização, tipo de atividade e características específicas.</div>
+                    </div>
+                    
+                    <div class="extracted-info" id="extractedInfo" style="display: none;">
+                        <div class="info-item">
+                            <label>Município identificado:</label>
+                            <span id="extractedMunicipio">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Atividade identificada:</label>
+                            <span id="extractedAtividade">-</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="input-method" id="manualMethod" style="display: none;">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="municipio">Município:</label>
+                            <input type="text" id="municipio" placeholder="Digite o município">
+                        </div>
+                        <div class="form-group">
+                            <label for="atividade">Tipo de Atividade:</label>
+                            <select id="atividade">
+                                <option value="">Selecione uma atividade</option>
+                                <option value="mineracao">Mineração</option>
+                                <option value="energia">Energia</option>
+                                <option value="industria">Indústria</option>
+                                <option value="agropecuaria">Agropecuária</option>
+                                <option value="infraestrutura">Infraestrutura</option>
+                                <option value="turismo">Turismo</option>
+                                <option value="residencial">Residencial</option>
+                                <option value="comercial">Comercial</option>
+                                <option value="outros">Outros</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="descricaoEmpreendimento">Descrição adicional do empreendimento (opcional):</label>
+                    <textarea id="descricaoEmpreendimento" placeholder="Informações complementares sobre o projeto..." rows="3"></textarea>
+                </div>
+            </div>
+            
+            <!-- Configurações -->
+            <div class="section-card">
+                <h2>⚙️ Configurações</h2>
+                
+                <div class="form-group">
+                    <label>Esferas Legais:</label>
+                    <div class="checkbox-group">
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="federal" checked>
+                            <span class="checkmark"></span>
+                            Federal
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="estadual" checked>
+                            <span class="checkmark"></span>
+                            Estadual
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="municipal" checked>
+                            <span class="checkmark"></span>
+                            Municipal
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="maxDocuments">Número máximo de legislações por esfera:</label>
+                    <div class="slider-container">
+                        <input type="range" id="maxDocumentsSlider" min="5" max="50" value="20" class="slider">
+                        <input type="number" id="maxDocumentsNumber" min="5" max="50" value="20" class="number-input">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="downloadFormat">Formato de download:</label>
+                    <select id="downloadFormat">
+                        <option value="excel">Excel (.xlsx)</option>
+                        <option value="csv">CSV (.csv)</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Botões de Ação -->
+            <div class="action-buttons">
+                <button class="btn btn-primary" id="gerarEstrutura">
+                    <i class="fas fa-table"></i>
+                    Gerar Estrutura
+                </button>
+                <button class="btn btn-secondary" id="gerarQuadroResumo">
+                    <i class="fas fa-list-alt"></i>
+                    Gerar Quadro-Resumo
+                </button>
+            </div>
+            
+            <!-- Loading -->
+            <div class="loading" id="loading" style="display: none;">
+                <div class="loading-spinner"></div>
+                <p>Processando sua solicitação...</p>
+            </div>
+            
+            <!-- Mensagens -->
+            <div class="message success" id="successMessage" style="display: none;">
+                <i class="fas fa-check-circle"></i>
+                <span id="successText"></span>
+            </div>
+            
+            <div class="message error" id="errorMessage" style="display: none;">
+                <i class="fas fa-exclamation-circle"></i>
+                <span id="errorText"></span>
+            </div>
+            
+            <!-- Resultados -->
+            <div class="results-section" id="resultsSection" style="display: none;">
+                <div class="section-card">
+                    <h2>📊 Resultados</h2>
+                    
+                    <div class="table-container">
+                        <div id="tableContent"></div>
+                    </div>
+                    
+                    <div class="download-buttons">
+                        <button class="btn btn-download" id="downloadExcel">
+                            <i class="fas fa-file-excel"></i>
+                            Download Excel
+                        </button>
+                        <button class="btn btn-download" id="downloadCsv">
+                            <i class="fas fa-file-csv"></i>
+                            Download CSV
+                        </button>
+                    </div>
+                    
+                    <div class="stats" id="statsSection" style="display: none;">
+                        <h3>📈 Estatísticas do Quadro-Resumo</h3>
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <span class="stat-label">Total de Legislações:</span>
+                                <span class="stat-value" id="totalLegislacoes">-</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Federais:</span>
+                                <span class="stat-value" id="totalFederais">-</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Estaduais:</span>
+                                <span class="stat-value" id="totalEstaduais">-</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Municipais:</span>
+                                <span class="stat-value" id="totalMunicipais">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Footer -->
+            <div class="footer">
+                <p>🌿 <strong>Plêiade Ambiental</strong> - Ferramenta de IA para Legislação Ambiental | Desenvolvido com tecnologia avançada de processamento de linguagem natural</p>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/static/js/gerador_tabelas.js"></script>
+</body>
+</html>

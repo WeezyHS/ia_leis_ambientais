@@ -24,18 +24,36 @@ if __name__ == "__main__":
     )
     
     if is_production:
-        # Em produção, roda apenas o FastAPI
+        # Em produção, roda FastAPI e Streamlit
         print(f"Modo produção detectado - porta: {port}")
-        os.environ["STREAMLIT_URL"] = f"https://your-app.railway.app/streamlit"
         
         print("Iniciando FastAPI em produção...")
-        # Usa uvicorn diretamente para melhor controle
-        subprocess.run([
+        # Inicia FastAPI em background
+        fastapi_process = subprocess.Popen([
             "uvicorn", "app.main:app", 
             "--host", "0.0.0.0", 
             "--port", str(port),
             "--workers", "1"
         ])
+        
+        # Aguarda um pouco para o FastAPI inicializar
+        time.sleep(3)
+        
+        print("Iniciando Streamlit em produção...")
+        # Inicia Streamlit na porta 8501
+        streamlit_process = subprocess.Popen([
+            "streamlit", "run", "tabela_generator/web_interface.py",
+            "--server.port", "8501",
+            "--server.address", "0.0.0.0",
+            "--server.headless", "true"
+        ])
+        
+        # Aguarda ambos os processos
+        try:
+            fastapi_process.wait()
+        except KeyboardInterrupt:
+            fastapi_process.terminate()
+            streamlit_process.terminate()
     else:
         # Em desenvolvimento local, rodamos ambos separadamente
         print("Modo desenvolvimento local detectado")
