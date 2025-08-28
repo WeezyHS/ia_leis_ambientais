@@ -144,8 +144,17 @@ class GeradorTabelas {
         // Validação anti-spam
         this.spamPatterns = [
             /(..)\1{4,}/g, // Caracteres repetidos
-            /[^\w\s.,!?;:()\-]/g, // Caracteres especiais
+            /[^\w\s.,!?;:()\-àáâãäèéêëìíîïòóôõöùúûüçÀÁÂÃÄÈÉÊËÌÍÎÏÒÓÔÕÖÙÚÛÜÇ]/g, // Caracteres especiais (permite acentos)
             /(.)\1{10,}/g // Repetição excessiva
+        ];
+        
+        // Lista de municípios do Tocantins
+        this.municipiosTocantins = [
+            "Palmas", "Araguaína", "Gurupi", "Porto Nacional", "Paraíso do Tocantins",
+            "Colinas do Tocantins", "Guaraí", "Tocantinópolis", "Formoso do Araguaia",
+            "Dianópolis", "Miracema do Tocantins", "Taguatinga", "Augustinópolis",
+            "Pedro Afonso", "Xambioá", "Alvorada", "Arraias", "Araguatins",
+            "Cristalândia", "Nova Olinda", "Ananás", "Outro município"
         ];
         
         // Mapeamento de atividades
@@ -189,7 +198,16 @@ class GeradorTabelas {
     }
     
     extractMunicipio(text) {
-        // Padrões para identificar municípios
+        const textLower = text.toLowerCase();
+        
+        // Primeiro: busca direta por qualquer município da lista (como no Streamlit)
+        for (const municipio of this.municipiosTocantins) {
+            if (textLower.includes(municipio.toLowerCase())) {
+                return municipio;
+            }
+        }
+        
+        // Segundo: fallback para padrões regex (casos não cobertos pela lista)
         const patterns = [
             /(?:município|cidade|localizada?|situado?)\s+(?:de|em|no|na)?\s+([A-ZÁÊÇÕ][a-záêçõ\s]+)/gi,
             /(?:em|no|na)\s+([A-ZÁÊÇÕ][a-záêçõ\s]+),?\s*(?:estado|[A-Z]{2})/gi,
@@ -429,7 +447,8 @@ class GeradorTabelas {
         if (this.currentMethod === 'detailed') {
             data.descricao_projeto = document.getElementById('projectDescription').value.trim();
         } else {
-            data.municipio = document.getElementById('municipio').value.trim();
+            const municipioElement = document.getElementById('municipio');
+            data.municipio = municipioElement.tagName === 'SELECT' ? municipioElement.value : municipioElement.value.trim();
             data.atividade = document.getElementById('atividade').value;
         }
         
